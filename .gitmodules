@@ -1,0 +1,3 @@
+[submodule "lib/aig"]
+	path = lib/aig
+	url = https://github.com/MyskYko/aig.git
