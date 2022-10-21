@@ -33,11 +33,8 @@ void CutEnumeration(aigman const &aig, vector<vector<Cut> > &cuts, unsigned cuts
         auto &signature = new_cut.signature;
         signature = cut0.signature | cut1.signature;
         // merge
-        if(cut0.leaves.size() + cut1.leaves.size() > cutsize) {
-          bitset<64> bs(signature);
-          if(bs.count() > cutsize) {
-            continue;
-          }
+        if(cut0.leaves.size() + cut1.leaves.size() > cutsize && bitset<64>(signature).count() > cutsize) {
+          continue;
         }
         leaves.resize(cut0.leaves.size() + cut1.leaves.size());
         leaves.resize(std::set_union(cut0.leaves.begin(), cut0.leaves.end(), cut1.leaves.begin(), cut1.leaves.end(), leaves.begin()) - leaves.begin());
