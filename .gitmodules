@@ -1,3 +1,6 @@
 [submodule "lib/aig"]
 	path = lib/aig
 	url = https://github.com/MyskYko/aig.git
+[submodule "lib/kissat"]
+	path = lib/kissat
+	url = https://github.com/MyskYko/kissat.git
