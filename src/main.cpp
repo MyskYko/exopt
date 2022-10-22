@@ -145,7 +145,7 @@ int main(int argc, char **argv) {
     //   cout << endl;
     // }
 
-    ExMan exman(br);
+    ExMan<KissatSolver> exman(br);
     aigman *aig2;
     assert(aig2 = exman.Solve(nGates));
     delete aig2;

@@ -1,29 +1,13 @@
 #pragma once
 
-extern "C" {
-  #include <kissat.h>
-}
-
 #include <aig.hpp>
 
+#include "kissat_solver.hpp"
+
+template <class T>
 class ExMan {
 private:
-  kissat *S;
-  int nVars;
-
-  void AddClause(std::vector<int> const &vLits);
-  void AddClause(int a);
-  void AddClause(int a, int b);
-  void AddClause(int a, int b, int c);
-
-  void Bimander(std::vector<int> const &vLits, int nbim = 2);
-  void Onehot(std::vector<int> const &vLits);
-
-  void And2(int a, int b, int c);
-  void Xor2(int a, int b, int c);
-  void AndN(std::vector<int> vLits, int r);
-  void OrN(std::vector<int> vLits, int r);
-
+  T *S;
   std::vector<std::vector<bool> > const &br;
   int nInputs;
   int nOutputs;
@@ -39,7 +23,8 @@ private:
 
 public:
   ExMan(std::vector<std::vector<bool> > const &br);
-  ~ExMan();
-  
+
   aigman *Solve(int nGates_);
 };
+
+template class ExMan<KissatSolver>;
