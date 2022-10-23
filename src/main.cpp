@@ -40,16 +40,18 @@ int main(int argc, char **argv) {
   string aigname = argv[1];
   aigman aig(aigname);
   aig.supportfanouts();
+  string delim;
   bool fSynthesized = true;
   while(fSynthesized) {
     fSynthesized = false;
     // cut enumeration
     vector<vector<Cut> > cuts;
     CutEnumeration(aig, cuts);
+    /*
     for(int i = 0; i < aig.nObjs; i++) {
       for(auto &cut: cuts[i]) {
         cout << i << " : ";
-        string delim;
+        delim = "";
         for(int j: cut.leaves) {
           cout << delim << j;
           delim = ", ";
@@ -57,6 +59,7 @@ int main(int argc, char **argv) {
         cout << endl;
       }
     }
+    */
     // cut to gates
     map<vector<int>, vector<int> > m;
     for(int i = 0; i < aig.nObjs; i++) {
@@ -81,7 +84,8 @@ int main(int argc, char **argv) {
     }
     // for each cut
     for(auto p: m) {
-      string delim;
+      /*
+      delim = "";
       for(int j: p.first) {
         cout << delim << j;
         delim = ", ";
@@ -93,12 +97,16 @@ int main(int argc, char **argv) {
         delim = ", ";
       }
       cout << endl;
+      */
       int nGates = p.second.size();
       if(nGates > 7) {
         continue;
       }
       // remove internal gates
       rem(aig, p.second);
+      if(aig.reach(p.second, p.first)) {
+        continue;
+      }
       delim = "";
       for(int j: p.first) {
         cout << delim << j;
@@ -111,31 +119,29 @@ int main(int argc, char **argv) {
         delim = ", ";
       }
       cout << endl;
-      if(aig.reach(p.second, p.first)) {
-        continue;
-      }
       // get relation
       vector<vector<bool> > br;
       GetBooleanRelation(aig, p.first, p.second, br);
-      // for(int i = 0; i < (int)br.size(); i++) {
-      //   cout << i << " : ";
-      //   delim = "";
-      //   for(int j = 0; j < (int)br[i].size(); j++) {
-      //     cout << delim << br[i][j];
-      //     delim = ", ";
-      //   }
-      //   cout << endl;
-      // }
+      /*
+      for(int i = 0; i < (int)br.size(); i++) {
+        cout << i << " : ";
+        delim = "";
+        for(int j = 0; j < (int)br[i].size(); j++) {
+          cout << delim << br[i][j];
+          delim = ", ";
+        }
+        cout << endl;
+      }
+      */
       // synthesis
       cout << "Gates : " << nGates << endl;
       ExMan<KissatSolver> exman(br);
       aigman *aig2;
-      {
-        // debug
-        aig2 = exman.Synth(nGates);
-        assert(aig2);
-        delete aig2;
-      }
+      /*
+      aig2 = exman.Synth(nGates);
+      assert(aig2);
+      delete aig2;
+      */
       if((aig2 = exman.ExSynth(nGates))) {
         std::cout << "Synthesized : " << aig2->nGates << std::endl;
         fSynthesized = true;
@@ -145,53 +151,25 @@ int main(int argc, char **argv) {
         }
         int a = aig.nGates;
         aig.import(aig2, p.first, outputs_shift);
-        // for(int i = 0; i < aig.nObjs; i++) {
-        //   if(aig.vDeads[i]) {
-        //     cout << i << " is dead " << endl;
-        //   }
-        // }
+        /*
+        for(int i = 0; i < aig.nObjs; i++) {
+          if(aig.vDeads[i]) {
+            cout << i << " is dead " << endl;
+          }
+        }
+        */
+        /*
         aig.write("y.aig");
         string cmd = "abc -q \"read y.aig; print_stats; cec " + aigname + "\"";
         int r = system(cmd.c_str());
-        cout << a << " " << aig.nGates << endl;
+        */
         assert(a - aig.nGates >= nGates - aig2->nGates);
         delete aig2;
         aig.renumber();
         break;
       }
-      // ofstream f("tmp.pla");
-      // f << ".i " << p.first.size() << endl;
-      // f << ".o " << p.second.size() << endl;
-      // for(int i = 0; i < (int)br.size(); i++) {
-      //   string fival = bitset<32>(i).to_string();
-      //   reverse(fival.begin(), fival.end());
-      //   fival.resize(p.first.size());
-      //   f << fival << " ";
-      //   for(int j = 0; j < (int)br[i].size(); j++) {
-      //     if(br[i][j]) {
-      //       string foval = bitset<32>(j).to_string();
-      //       reverse(foval.begin(), foval.end());
-      //       foval.resize(p.second.size());
-      //       f << foval << endl;
-      //       break;
-      //     }
-      //   }
-      // }
-      // f << ".e" << endl;
-      // string cmd = "abc -q \"read tmp.pla; fx; strash; write_aiger tmp.aig\"";
-      // system(cmd.c_str());
-      // aigman aig2;
-      // aig2.read("tmp.aig");
-      // std::vector<int> outputs_shift;
-      // for(int i: p.second) {
-      //   outputs_shift.push_back(i << 1);
-      // }
-      // aig.import(&aig2, p.first, outputs_shift);
-      // break;
     }
   }
-
   aig.write("z.aig");
-
   return 0;
 }
