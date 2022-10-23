@@ -1,5 +1,3 @@
-#include <iostream>
-#include <cmath>
 #include <cassert>
 
 #include "util.hpp"
@@ -115,7 +113,7 @@ aigman *ExMan<T>::GetAig() {
 }
 
 template <class T>
-aigman *ExMan<T>::Solve(int nGates_) {
+aigman *ExMan<T>::Synth(int nGates_) {
   nGates = nGates_;
   S = new T;
   GenSels();
@@ -174,5 +172,22 @@ aigman *ExMan<T>::Solve(int nGates_) {
     aig = GetAig();
   }
   delete S;
+  return aig;
+}
+
+template <class T>
+aigman *ExMan<T>::ExSynth(int nGates_) {
+  assert(nGates_);
+  aigman *aig = NULL;
+  while(--nGates_) {
+    aigman *aig2 = Synth(nGates_);
+    if(!aig2) {
+      break;
+    }
+    if(aig) {
+      delete aig;
+    }
+    aig = aig2;
+  }
   return aig;
 }

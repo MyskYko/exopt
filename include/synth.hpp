@@ -24,7 +24,8 @@ private:
 public:
   ExMan(std::vector<std::vector<bool> > const &br);
 
-  aigman *Solve(int nGates_);
+  aigman *Synth(int nGates_);
+  aigman *ExSynth(int nGates_);
 };
 
 template class ExMan<KissatSolver>;
