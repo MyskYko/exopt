@@ -18,6 +18,7 @@ private:
   std::vector<std::vector<int> > posels;
 
   void GenSels();
+  void SortSels();
   void GenOne(std::vector<int> cands, std::vector<int> const &pos);
   aigman *GetAig();
 

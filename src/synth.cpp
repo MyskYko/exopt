@@ -38,6 +38,44 @@ void ExMan<T>::GenSels() {
 }
 
 template <class T>
+void ExMan<T>::SortSels() {
+  for(int i = 0; i < nGates; i++) {
+    for(int j = 0; j < nInputs + i; j++) {
+      vector<int> vLits;
+      for(int k = j; k >= 0; k--) {
+        vLits.push_back(sels[i + i + 1][k]);
+      }
+      vLits.push_back(-sels[i + i][j]);
+      S->AddClause(vLits);
+    }
+  }
+  for(int i = 0; i < nGates - 1; i++) {
+    for(int j = 0; j < nInputs + i - 1; j++) {
+    vector<int> vLits;
+      for(int k = j; k >= 0; k--) {
+        vLits.push_back(sels[i + i][k]);
+      }
+      vLits.push_back(-sels[i + i + 2][j]);
+      S->AddClause(vLits);
+    }
+  }
+  for(int i = 0; i < nGates - 1; i++) {
+    for(int j = 1; j < nInputs + i; j++) {
+      for(int k = j - 1; k >= 0; k--) {
+        vector<int> vLits;
+        vLits.push_back(-sels[i + i][j]);
+        vLits.push_back(-sels[i + i + 2][j]);
+        for(int l = k; l >= 0; l--) {
+          vLits.push_back(sels[i + i + 1][l]);
+        }
+        vLits.push_back(-sels[i + i + 3][k]);
+        S->AddClause(vLits);
+      }
+    }
+  }
+}
+
+template <class T>
 void ExMan<T>::GenOne(vector<int> cands, vector<int> const &pos) {
   for(int i = 0; i < nGates; i++) {
     vector<int> fis;
@@ -117,6 +155,7 @@ aigman *ExMan<T>::Synth(int nGates_) {
   nGates = nGates_;
   S = new T;
   GenSels();
+  SortSels();
   for(int i = 0; i < (int)br.size(); i++) {
     bool fDc = true;
     for(int j = 0; j < (int)br[i].size(); j++) {
