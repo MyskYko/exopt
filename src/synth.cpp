@@ -87,13 +87,13 @@ aigman *ExMan<T>::GetAig() {
       }
       assert(j < (int)cands.size());
       if(S->Value(negs[k])) {
-        aig->vObjs.push_back((cands[j] << 1) ^ 1);
+        fis.push_back((cands[j] << 1) ^ 1);
       } else {
-        aig->vObjs.push_back(cands[j] << 1);
+        fis.push_back(cands[j] << 1);
       }
     }
-    cands.push_back(aig->nObjs++);
-    aig->nGates++;
+    assert(fis.size() == 2);
+    cands.push_back(aig->newgate(fis[0], fis[1]));
   }
   for(int i = 0; i < nOutputs; i++) {
     int j = 0;
