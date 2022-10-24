@@ -6,9 +6,15 @@
 using namespace std;
 
 template <class T>
-ExMan<T>::ExMan(vector<vector<bool> > const &br): br(br) {
+ExMan<T>::ExMan(vector<vector<bool> > const &br, vector<vector<bool> > const *sim): br(br), sim(sim) {
   nInputs = clog2(br.size());
   nOutputs = clog2(br[0].size());
+  if(sim) {
+    assert(nInputs == clog2(sim->size()));
+    nExtraInputs = (*sim)[0].size();
+  } else {
+    nExtraInputs = 0;
+  }
 }
 
 template <class T>
@@ -19,7 +25,7 @@ void ExMan<T>::GenSels() {
   sels.resize(nGates * 2);
   for(int i = 0; i < nGates * 2; i++) {
     negs[i] = S->NewVar();
-    for(int j = 0; j < nInputs + i/2; j++) {
+    for(int j = 0; j < nInputs + nExtraInputs + i/2; j++) {
       sels[i].push_back(S->NewVar());
     }
     S->Onehot(sels[i]);
@@ -30,7 +36,7 @@ void ExMan<T>::GenSels() {
   posels.resize(nOutputs);
   for(int i = 0; i < nOutputs; i++) {
     ponegs[i] = S->NewVar();
-    for(int j = 0; j < nInputs + nGates; j++) {
+    for(int j = 0; j < nInputs + nExtraInputs + nGates; j++) {
       posels[i].push_back(S->NewVar());
     }
     S->Onehot(posels[i]);
@@ -40,7 +46,7 @@ void ExMan<T>::GenSels() {
 template <class T>
 void ExMan<T>::SortSels() {
   for(int i = 0; i < nGates; i++) {
-    for(int j = 0; j < nInputs + i; j++) {
+    for(int j = 0; j < nInputs + nExtraInputs + i; j++) {
       vector<int> vLits;
       for(int k = j; k >= 0; k--) {
         vLits.push_back(sels[i + i + 1][k]);
@@ -50,7 +56,7 @@ void ExMan<T>::SortSels() {
     }
   }
   for(int i = 0; i < nGates - 1; i++) {
-    for(int j = 0; j < nInputs + i - 1; j++) {
+    for(int j = 0; j < nInputs + nExtraInputs + i - 1; j++) {
     vector<int> vLits;
       for(int k = j; k >= 0; k--) {
         vLits.push_back(sels[i + i][k]);
@@ -60,7 +66,7 @@ void ExMan<T>::SortSels() {
     }
   }
   for(int i = 0; i < nGates - 1; i++) {
-    for(int j = 1; j < nInputs + i; j++) {
+    for(int j = 1; j < nInputs + nExtraInputs + i; j++) {
       for(int k = j - 1; k >= 0; k--) {
         vector<int> vLits;
         vLits.push_back(-sels[i + i][j]);
@@ -107,9 +113,9 @@ void ExMan<T>::GenOne(vector<int> cands, vector<int> const &pos) {
 
 template <class T>
 aigman *ExMan<T>::GetAig() {
-  aigman *aig = new aigman(nInputs, 0);
-  vector<int> cands(nInputs);
-  for(int i = 0; i < nInputs; i++) {
+  aigman *aig = new aigman(nInputs + nExtraInputs, 0);
+  vector<int> cands(nInputs + nExtraInputs);
+  for(int i = 0; i < nInputs + nExtraInputs; i++) {
     cands[i] = i + 1;
   }
   for(int i = 0; i < nGates; i++) {
@@ -146,7 +152,6 @@ aigman *ExMan<T>::GetAig() {
     }
     aig->nPos++;
   }
-  
   return aig;
 }
 
@@ -171,16 +176,27 @@ aigman *ExMan<T>::Synth(int nGates_) {
     for(int k = 0; k < nInputs; k++) {
       pis[k] = S->NewVar();
     }
-    vector<int> pos(nOutputs);
-    for(int k = 0; k < nOutputs; k++) {
-      pos[k] = S->NewVar();
-    }
     for(int k = 0; k < nInputs; k++) {
       if((i >> k) & 1) {
         S->AddClause(pis[k]);
       } else {
         S->AddClause(-pis[k]);
       }
+    }
+    vector<int> exins(nExtraInputs);
+    for(int k = 0; k < nExtraInputs; k++) {
+      exins[k] = S->NewVar();
+    }
+    for(int k = 0; k < nExtraInputs; k++) {
+      if((*sim)[i][k]) {
+        S->AddClause(exins[k]);
+      } else {
+        S->AddClause(-exins[k]);
+      }
+    }
+    vector<int> pos(nOutputs);
+    for(int k = 0; k < nOutputs; k++) {
+      pos[k] = S->NewVar();
     }
     vector<int> tmps;
     for(int j = 0; j < (int)br[i].size(); j++) {
@@ -204,6 +220,7 @@ aigman *ExMan<T>::Synth(int nGates_) {
     } else {
       S->AddClause(tmps[0]);
     }
+    pis.insert(pis.end(), exins.begin(), exins.end());
     GenOne(pis, pos);
   }
   aigman *aig = NULL;
