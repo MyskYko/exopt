@@ -100,6 +100,151 @@ int main(int argc, char **argv) {
       */
       int nGates = p.second.size();
       if(nGates > 7) {
+        auto gates = p.second;
+        rem(aig, p.second);
+        delim = "";
+        for(int j: p.first) {
+          cout << delim << j;
+          delim = ", ";
+        }
+        cout << " : ";
+        delim = "";
+        for(int j: p.second) {
+          cout << delim << j;
+          delim = ", ";
+        }
+        cout << endl;
+        for(int i: p.second) {
+          cout << "\tFanin cone of " << i << endl;
+          if(aig.reach(vector<int>{i}, p.first)) {
+            cout << "\tSkipped due to potential loops" << endl;
+            continue;
+          }
+          for(auto cut: cuts[i]) {
+            if(cut.leaves == p.first || cut.leaves.size() == 1) {
+              continue;
+            }
+            cout << "\t\t";
+            delim = "";
+            for(int j: cut.leaves) {
+              cout << delim << j;
+              delim = ", ";
+            }
+            cout << " : ";
+            delim = "";
+            for(int j: m[cut.leaves]) {
+              cout << delim << j;
+              delim = ", ";
+            }
+            cout << endl;
+            nGates = m[cut.leaves].size();
+            if(nGates > 7) {
+              cout << "\t\tSkipped because the cone has more than 7 gates" << endl;
+              continue;
+            }
+            if(!includes(gates.begin(), gates.end(), m[cut.leaves].begin(), m[cut.leaves].end())) {
+              cout << "\t\tSkipped because the cone is not included" << endl;
+              continue;
+            }
+            auto outputs = m[cut.leaves];
+            rem(aig, outputs);
+            cout << "\t\t";
+            delim = "";
+            for(int j: cut.leaves) {
+              cout << delim << j;
+              delim = ", ";
+            }
+            cout << " : ";
+            delim = "";
+            for(int j: outputs) {
+              cout << delim << j;
+              delim = ", ";
+            }
+            cout << endl;
+            if(aig.reach(outputs, p.first)) {
+              cout << "\t\tSkipped due to potential loops" << endl;
+              continue;
+            }
+            vector<int> gates_(gates.size());
+            gates_.resize(set_difference(gates.begin(), gates.end(), m[cut.leaves].begin(), m[cut.leaves].end(), gates_.begin()) - gates_.begin());
+            /*
+            cout << "\t\tGates outside of the cone : ";
+            delim = "";
+            for(int j: gates_) {
+              cout << delim << j;
+              delim = ", ";
+            }
+            cout << endl;
+            */
+            for(auto it = gates_.begin(); it != gates_.end();) {
+              if(aig.reach(outputs, vector<int>{*it})) {
+                it = gates_.erase(it);
+                continue;
+              }
+              it++;
+            }
+            cout << "\t\tUsable gates : ";
+            delim = "";
+            for(int j: gates_) {
+              cout << delim << j;
+              delim = ", ";
+            }
+            cout << endl;
+            vector<vector<bool> > br;
+            GetBooleanRelation(aig, p.first, outputs, br);
+            /*
+            for(int k = 0; k < (int)br.size(); k++) {
+              cout << "\t\t" << k << " : ";
+              delim = "";
+              for(int j = 0; j < (int)br[k].size(); j++) {
+                cout << delim << br[k][j];
+                delim = ", ";
+              }
+              cout << endl;
+            }
+            */
+            vector<vector<bool> > sim;
+            GetSim(aig, p.first, gates_, sim);
+            /*
+            for(int k = 0; k < (int)sim.size(); k++) {
+              cout << "\t\t" << k << " : ";
+              for(int j = 0; j < (int)sim[k].size(); j++) {
+                cout << sim[k][j];
+              }
+              cout << endl;
+            }
+            */
+            cout << "\t\tGates : " << nGates << endl;
+            ExMan<KissatSolver> exman(br, &sim);
+            aigman *aig2;
+            if((aig2 = exman.ExSynth(nGates))) {
+              std::cout << "\t\tSynthesized : " << aig2->nGates << std::endl;
+              fSynthesized = true;
+              std::vector<int> outputs_shift;
+              for(int j: outputs) {
+                outputs_shift.push_back(j << 1);
+              }
+              int a = aig.nGates;
+              gates_.insert(gates_.begin(), p.first.begin(), p.first.end());
+              aig.import(aig2, gates_, outputs_shift);
+              /*
+              aig.write("y.aig");
+              string cmd = "abc -q \"read y.aig; print_stats; cec " + aigname + "\"";
+              int r = system(cmd.c_str());
+              */
+              assert(a - aig.nGates >= nGates - aig2->nGates);
+              delete aig2;
+              aig.renumber();
+              break;
+            }
+          }
+          if(fSynthesized) {
+            break;
+          }
+        }
+        if(fSynthesized) {
+          break;
+        }
         continue;
       }
       // remove internal gates
