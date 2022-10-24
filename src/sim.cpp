@@ -4,6 +4,13 @@
 
 using namespace std;
 
+static const unsigned long long basepats[] = {0xaaaaaaaaaaaaaaaaull,
+                                              0xccccccccccccccccull,
+                                              0xf0f0f0f0f0f0f0f0ull,
+                                              0xff00ff00ff00ff00ull,
+                                              0xffff0000ffff0000ull,
+                                              0xffffffff00000000ull};
+
 void GetBooleanRelation(aigman &aig, vector<int> const &inputs, vector<int> const &outputs, vector<vector<bool> > &br) {
   assert(aig.nPis <= 16);
   assert(inputs.size() <= 30);
@@ -19,22 +26,12 @@ void GetBooleanRelation(aigman &aig, vector<int> const &inputs, vector<int> cons
   vector<int> focone;
   aig.getfocone(outputs, focone);
   // generate PI patterns
-  vector<unsigned long long> inpats;
-  inpats.push_back(0xaaaaaaaaaaaaaaaaull);
-  inpats.push_back(0xccccccccccccccccull);
-  inpats.push_back(0xf0f0f0f0f0f0f0f0ull);
-  inpats.push_back(0xff00ff00ff00ff00ull);
-  inpats.push_back(0xffff0000ffff0000ull);
-  inpats.push_back(0xffffffff00000000ull);
+  vector<unsigned long long> inpats(basepats, basepats + 6);
   inpats.resize(aig.nPis);
   int ninpats = aig.nPis <= 6? 1: (1 << (aig.nPis - 6));
   for(int i = 0; i < ninpats; i++) {
     for(int j = 0; j < aig.nPis - 6; j++) {
-      if((i >> j) & 1) {
-        inpats[j + 6] = 0xffffffffffffffffull;
-      } else {
-        inpats[j + 6] = 0ull;
-      }
+      inpats[j + 6] = (i >> j) & 1? 0xffffffffffffffffull: 0ull;
     }
     // run simulation
     aig.simulate(inpats);
@@ -53,11 +50,7 @@ void GetBooleanRelation(aigman &aig, vector<int> const &inputs, vector<int> cons
     // generate FO patterns
     for(int k = 0; k < nfopats; k++) {
       for(int j = 0; j < (int)outputs.size(); j++) {
-        if((k >> j) & 1) {
-          aig.vSims[outputs[j]] = 0xffffffffffffffffull;
-        } else {
-          aig.vSims[outputs[j]] = 0ull;
-        }
+        aig.vSims[outputs[j]] = (k >> j) & 1? 0xffffffffffffffffull: 0ull;
       }
       // run simulation from FOs
       aig.resimulate(focone);
@@ -67,9 +60,7 @@ void GetBooleanRelation(aigman &aig, vector<int> const &inputs, vector<int> cons
         diff |= outpats[j] ^ aig.getsim(aig.vPos[j]);
       }
       for(int j = 0; j < 64; j++) {
-        if((diff >> j) & 1) {
-          br[fivals[j]][k] = false;
-        }
+        br[fivals[j]][k] = (diff >> j) & 1? false: br[fivals[j]][k];
       }
     }
   }
