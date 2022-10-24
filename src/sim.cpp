@@ -28,8 +28,12 @@ void GetBooleanRelation(aigman &aig, vector<int> const &inputs, vector<int> cons
   // generate PI patterns
   vector<unsigned long long> inpats(basepats, basepats + 6);
   inpats.resize(aig.nPis);
-  int ninpats = aig.nPis <= 6? 1: (1 << (aig.nPis - 6));
-  for(int i = 0; i < ninpats; i++) {
+  int ninpats = 1 << aig.nPis;
+  int nsims = ninpats >> 6;
+  if(!nsims) {
+    nsims = 1;
+  }
+  for(int i = 0; i < nsims; i++) {
     for(int j = 0; j < aig.nPis - 6; j++) {
       inpats[j + 6] = (i >> j) & 1? 0xffffffffffffffffull: 0ull;
     }
@@ -41,9 +45,9 @@ void GetBooleanRelation(aigman &aig, vector<int> const &inputs, vector<int> cons
       outpats[j] = aig.getsim(aig.vPos[j]);
     }
     // get FI values
-    vector<int> fivals(64);
+    vector<int> fivals(min(64, ninpats));
     for(int k = 0; k < (int)inputs.size(); k++) {
-      for(int j = 0; j < 64; j++) {
+      for(int j = 0; j < 64 && j < ninpats; j++) {
         fivals[j] |= ((aig.vSims[inputs[k]] >> j) & 1) << k;
       }
     }
@@ -59,7 +63,7 @@ void GetBooleanRelation(aigman &aig, vector<int> const &inputs, vector<int> cons
       for(int j = 0; j < aig.nPos; j++) {
         diff |= outpats[j] ^ aig.getsim(aig.vPos[j]);
       }
-      for(int j = 0; j < 64; j++) {
+      for(int j = 0; j < 64 && j < ninpats; j++) {
         br[fivals[j]][k] = (diff >> j) & 1? false: br[fivals[j]][k];
       }
     }
