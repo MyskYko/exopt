@@ -84,7 +84,6 @@ int main(int argc, char **argv) {
     }
     // for each cut
     for(auto p: m) {
-      /*
       delim = "";
       for(int j: p.first) {
         cout << delim << j;
@@ -97,23 +96,24 @@ int main(int argc, char **argv) {
         delim = ", ";
       }
       cout << endl;
-      */
-      int nGates = p.second.size();
-      if(nGates > 7) {
-        auto gates = p.second;
-        rem(aig, p.second);
-        delim = "";
-        for(int j: p.first) {
-          cout << delim << j;
-          delim = ", ";
-        }
-        cout << " : ";
-        delim = "";
-        for(int j: p.second) {
-          cout << delim << j;
-          delim = ", ";
-        }
-        cout << endl;
+      // remove internal gates
+      auto gates = p.second;
+      int nGates = gates.size();
+      rem(aig, p.second);
+      delim = "";
+      for(int j: p.first) {
+        cout << delim << j;
+        delim = ", ";
+      }
+      cout << " : ";
+      delim = "";
+      for(int j: p.second) {
+        cout << delim << j;
+        delim = ", ";
+      }
+      cout << endl;
+      // switch to sub-cut mode
+      if(nGates > 7 || aig.reach(p.second, p.first)) {
         for(int i: p.second) {
           cout << "\tFanin cone of " << i << endl;
           if(aig.reach(vector<int>{i}, p.first)) {
@@ -183,7 +183,7 @@ int main(int argc, char **argv) {
               }
               it++;
             }
-            cout << "\t\tUsable gates : ";
+            cout << "\t\tExtra inputs : ";
             delim = "";
             for(int j: gates_) {
               cout << delim << j;
@@ -214,11 +214,11 @@ int main(int argc, char **argv) {
               cout << endl;
             }
             */
-            cout << "\t\tGates : " << nGates << endl;
+            cout << "\t\tOptimize a cut of " << nGates << " gates" << endl;
             ExMan<KissatSolver> exman(br, &sim);
             aigman *aig2;
             if((aig2 = exman.ExSynth(nGates))) {
-              std::cout << "\t\tSynthesized : " << aig2->nGates << std::endl;
+              std::cout << "\t\tSynthesized a cut of " << aig2->nGates << " gates" << std::endl;
               fSynthesized = true;
               std::vector<int> outputs_shift;
               for(int j: outputs) {
@@ -247,23 +247,6 @@ int main(int argc, char **argv) {
         }
         continue;
       }
-      // remove internal gates
-      rem(aig, p.second);
-      if(aig.reach(p.second, p.first)) {
-        continue;
-      }
-      delim = "";
-      for(int j: p.first) {
-        cout << delim << j;
-        delim = ", ";
-      }
-      cout << " : ";
-      delim = "";
-      for(int j: p.second) {
-        cout << delim << j;
-        delim = ", ";
-      }
-      cout << endl;
       // get relation
       vector<vector<bool> > br;
       GetBooleanRelation(aig, p.first, p.second, br);
@@ -279,7 +262,7 @@ int main(int argc, char **argv) {
       }
       */
       // synthesis
-      cout << "Gates : " << nGates << endl;
+      cout << "Optimize a cut of " << nGates << " gates" << endl;
       ExMan<KissatSolver> exman(br);
       aigman *aig2;
       /*
@@ -288,7 +271,7 @@ int main(int argc, char **argv) {
       delete aig2;
       */
       if((aig2 = exman.ExSynth(nGates))) {
-        std::cout << "Synthesized : " << aig2->nGates << std::endl;
+        std::cout << "Synthesized a cut of " << aig2->nGates << " gates" << std::endl;
         fSynthesized = true;
         std::vector<int> outputs_shift;
         for(int i: p.second) {
