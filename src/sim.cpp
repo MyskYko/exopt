@@ -65,3 +65,35 @@ void GetBooleanRelation(aigman &aig, vector<int> const &inputs, vector<int> cons
     }
   }
 }
+
+void GetSim(aigman &aig, vector<int> const &inputs, vector<int> const &outputs, vector<vector<bool> > &sim) {
+  assert(inputs.size() <= 16);
+  aig.vSims.resize(aig.nObjs);
+  // allocate
+  int nfipats = 1 << inputs.size();
+  sim.resize(nfipats);
+  for(int i = 0; i < nfipats; i++) {
+    sim[i].resize(outputs.size());
+  }
+  // generate input patterns
+  for(int i = 0; i < (int)inputs.size() && i < 6; i++) {
+    aig.vSims[inputs[i]] = basepats[i];
+  }
+  int nsims = nfipats >> 6;
+  if(!nsims) {
+    nsims = 1;
+  }
+  for(int i = 0; i < nsims; i++) {
+    for(int j = 0; j < (int)inputs.size() - 6; j++) {
+      aig.vSims[inputs[j + 6]] = (i >> j) & 1? 0xffffffffffffffffull: 0ull;
+    }
+    // run simulation
+    aig.resimulate(outputs);
+    // get output values
+    for(int k = 0; k < (int)outputs.size(); k++) {
+      for(int j = 0; j < 64 && j < nfipats; j++) {
+        sim[j + i * 64][k] = (aig.vSims[outputs[k]] >> j) & 1;
+      }
+    }
+  }
+}
