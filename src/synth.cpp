@@ -81,6 +81,24 @@ void ExMan<T>::SortSels() {
       }
     }
   }
+  for(int i = 1; i < nGates; i++) {
+    for(int j = i - 1; j >= 0; j--) {
+      for(int k = 0; k < nInputs + nExtraInputs + j - 1; k++) {
+        vector<int> vLits;
+        vLits.push_back(-sels[i + i][nInputs + nExtraInputs + j - 1]);
+        vLits.push_back(-sels[j + j][k]);
+        vLits.push_back(-sels[i + i + 1][k + 1]);
+        S->AddClause(vLits);
+      }
+      for(int k = 0; k < nInputs + nExtraInputs + j - 1; k++) {
+        vector<int> vLits;
+        vLits.push_back(-sels[i + i][nInputs + nExtraInputs + j - 1]);
+        vLits.push_back(-sels[j + j + 1][k]);
+        vLits.push_back(-sels[i + i + 1][k]);
+        S->AddClause(vLits);
+      }
+    }
+  }
 }
 
 template <class T>
