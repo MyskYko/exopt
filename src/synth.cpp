@@ -174,25 +174,11 @@ aigman *ExMan<T>::Synth(int nGates_) {
     }
     vector<int> pis(nInputs);
     for(int k = 0; k < nInputs; k++) {
-      pis[k] = S->NewVar();
-    }
-    for(int k = 0; k < nInputs; k++) {
-      if((i >> k) & 1) {
-        S->AddClause(pis[k]);
-      } else {
-        S->AddClause(-pis[k]);
-      }
+      pis[k] = (i >> k) & 1? S->one: S->zero;
     }
     vector<int> exins(nExtraInputs);
     for(int k = 0; k < nExtraInputs; k++) {
-      exins[k] = S->NewVar();
-    }
-    for(int k = 0; k < nExtraInputs; k++) {
-      if((*sim)[i][k]) {
-        S->AddClause(exins[k]);
-      } else {
-        S->AddClause(-exins[k]);
-      }
+      exins[k] = (*sim)[i][k]? S->one: S->zero;
     }
     vector<int> pos(nOutputs);
     for(int k = 0; k < nOutputs; k++) {
@@ -213,13 +199,7 @@ aigman *ExMan<T>::Synth(int nGates_) {
         S->AndN(vLits, tmps.back());
       }
     }
-    if(tmps.size() > 1) {
-      int r = S->NewVar();
-      S->OrN(tmps, r);
-      S->AddClause(r);
-    } else {
-      S->AddClause(tmps[0]);
-    }
+    S->AddClause(tmps);
     pis.insert(pis.end(), exins.begin(), exins.end());
     GenOne(pis, pos);
   }
