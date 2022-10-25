@@ -12,9 +12,7 @@ private:
   kissat *S;
 
 public:
-  KissatSolver(): nVars(0) {
-    S = kissat_init();
-  }
+  KissatSolver(): nVars(0), S(kissat_init()) {}
   ~KissatSolver() {
     kissat_release(S);
   }
@@ -25,6 +23,14 @@ public:
   using Solver::AddClause;
   void AddClause(std::vector<int> const &vLits) {
     for(int i = 0; i < (int)vLits.size(); i++) {
+      if(vLits[i] == one) {
+        return;
+      }
+    }
+    for(int i = 0; i < (int)vLits.size(); i++) {
+      if(vLits[i] == zero) {
+        continue;
+      }
       kissat_add(S, vLits[i]);
     }
     kissat_add(S, 0);
