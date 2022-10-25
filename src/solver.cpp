@@ -5,40 +5,6 @@
 
 using namespace std;
 
-void Solver::AddClause(int a) {
-  AddClause(vector<int>{a});
-}
-void Solver::AddClause(int a, int b) {
-  AddClause(vector<int>{a, b});
-}
-void Solver::AddClause(int a, int b, int c) {
-  AddClause(vector<int>{a, b, c});
-}
-
-void Solver::And2(int a, int b, int c) {
-  AddClause(a, -c), AddClause(b, -c), AddClause(-a, -b, c);
-}
-void Solver::Xor2(int a, int b, int c) {
-  AddClause(a, b, -c), AddClause(-a, -b, -c), AddClause(-a, b, c), AddClause(a, -b, c);
-}
-void Solver::AndN(std::vector<int> vLits, int r) {
-  for(int i = 0; i < (int)vLits.size(); i++) {
-    AddClause(vLits[i], -r);
-  }
-  for(int i = 0; i < (int)vLits.size(); i++) {
-    vLits[i] = -vLits[i];
-  }
-  vLits.push_back(r);
-  AddClause(vLits);
-}
-void Solver::OrN(std::vector<int> vLits, int r) {
-  for(int i = 0; i < (int)vLits.size(); i++) {
-    AddClause(-vLits[i], r);
-  }
-  vLits.push_back(-r);
-  AddClause(vLits);
-}
-
 void Solver::Bimander(vector<int> const &vLits, int nbim) {
   vector<int> vLits2;
   int m = vLits.size() / nbim + vLits.size() % nbim;

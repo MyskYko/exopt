@@ -4,6 +4,8 @@
 
 class Solver {
 private:
+  int nVars;
+
   void Comparator(int a, int b, int c, int d);
   void PwSplit(std::vector<int> const &a, std::vector<int> &b, std::vector<int> &c);
   void PwMerge(std::vector<int> const &a, std::vector<int> const &b, std::vector<int> &c);
@@ -24,7 +26,7 @@ private:
 protected:
   bool fDirect;
 
-  Solver(): fDirect(true), zero(0x7fffffff), one(-0x7fffffff) {}
+  Solver(): nVars(0), fDirect(true), zero(0x7fffffff), one(-0x7fffffff) {}
 
   void Bimander(std::vector<int> const &vLits, int nbim);
 
@@ -32,27 +34,152 @@ protected:
   void OddEvenSel4(std::vector<int> const &invars, std::vector<int> &outvars, int k);
   void PairwiseSel(std::vector<int> const &invars, std::vector<int> &outvars, int k);
 
+  virtual void AddClause_(std::vector<int> const &vLits) = 0;
+  virtual bool Value_(int i) = 0;
+  virtual void AMO_(std::vector<int> const &vLits) = 0;
+  virtual void AMK_(std::vector<int> const &vLits, int k) = 0;
+
 public:
-  int zero;
-  int one;
+  const int zero;
+  const int one;
 
   virtual ~Solver() {}
 
-  virtual int NewVar() = 0;
-  virtual void AddClause(std::vector<int> const &vLits) = 0;
   virtual int Solve() = 0;
-  virtual bool Value(int i) = 0;
+
+  inline int NewVar();
+
+  inline void AddClause(std::vector<int> vLits);
+  inline void AddClause(int a);
+  inline void AddClause(int a, int b);
+  inline void AddClause(int a, int b, int c);
+
+  inline bool Value(int i);
+
+  inline void AMO(std::vector<int> vLits);
+  inline void Onehot(std::vector<int> const &vLits);
+  inline void AMK(std::vector<int> vLits, int k);
   
-  virtual void AMO(std::vector<int> const &vLits) = 0;
-  virtual void Onehot(std::vector<int> const &vLits) = 0;
-  virtual void AMK(std::vector<int> const &vLits, int k) = 0;
-
-  void AddClause(int a);
-  void AddClause(int a, int b);
-  void AddClause(int a, int b, int c);
-
-  void And2(int a, int b, int c);
-  void Xor2(int a, int b, int c);
-  void AndN(std::vector<int> vLits, int r);
-  void OrN(std::vector<int> vLits, int r);
+  inline void And2(int a, int b, int c);
+  inline void Xor2(int a, int b, int c);
+  inline void AndN(std::vector<int> vLits, int r);
+  inline void OrN(std::vector<int> vLits, int r);
 };
+
+int Solver::NewVar() {
+  return ++nVars;
+}
+
+void Solver::AddClause(std::vector<int> vLits) {
+  for(std::vector<int>::iterator it = vLits.begin(); it != vLits.end();) {
+    if(*it == one) {
+      return;
+    }
+    if(*it == zero) {
+      it = vLits.erase(it);
+      continue;
+    }
+    it++;
+  }
+  AddClause_(vLits);
+}
+void Solver::AddClause(int a) {
+  AddClause(std::vector<int>{a});
+}
+void Solver::AddClause(int a, int b) {
+  AddClause(std::vector<int>{a, b});
+}
+void Solver::AddClause(int a, int b, int c) {
+  AddClause(std::vector<int>{a, b, c});
+}
+
+bool Solver::Value(int i) {
+  if(i == zero) {
+    return false;
+  }
+  if(i == one) {
+    return true;
+  }
+  return Value_(i);
+}
+
+void Solver::AMO(std::vector<int> vLits) {
+  bool fOne = false;
+  for(std::vector<int>::iterator it = vLits.begin(); it != vLits.end();) {
+    if(*it == one) {
+      if(fOne) {
+        AddClause(zero);
+        return;
+      }
+      fOne = true;
+      it = vLits.erase(it);
+      continue;
+    }
+    if(*it == zero) {
+      it = vLits.erase(it);
+      continue;
+    }
+    it++;
+  }
+  if(fOne) {
+    for(std::vector<int>::iterator it = vLits.begin(); it != vLits.end(); it++) {
+      AddClause(-*it);
+    }
+    return;
+  }
+  AMO_(vLits);
+}
+void Solver::Onehot(std::vector<int> const &vLits) {
+  AMO(vLits);
+  AddClause(vLits);
+}
+void Solver::AMK(std::vector<int> vLits, int k) {
+  for(std::vector<int>::iterator it = vLits.begin(); it != vLits.end();) {
+    if(*it == one) {
+      if(!k) {
+        AddClause(zero);
+        return;
+      }
+      k--;
+      it = vLits.erase(it);
+      continue;
+    }
+    if(*it == zero) {
+      it = vLits.erase(it);
+      continue;
+    }
+    it++;
+  }
+  if((int)vLits.size() <= k) {
+    return;
+  }
+  if(k == 1) {
+    AMO_(vLits);
+    return;
+  }
+  AMK_(vLits, k);
+}
+
+void Solver::And2(int a, int b, int c) {
+  AddClause(a, -c), AddClause(b, -c), AddClause(-a, -b, c);
+}
+void Solver::Xor2(int a, int b, int c) {
+  AddClause(a, b, -c), AddClause(-a, -b, -c), AddClause(-a, b, c), AddClause(a, -b, c);
+}
+void Solver::AndN(std::vector<int> vLits, int r) {
+  for(int i = 0; i < (int)vLits.size(); i++) {
+    AddClause(vLits[i], -r);
+  }
+  for(int i = 0; i < (int)vLits.size(); i++) {
+    vLits[i] = -vLits[i];
+  }
+  vLits.push_back(r);
+  AddClause(vLits);
+}
+void Solver::OrN(std::vector<int> vLits, int r) {
+  for(int i = 0; i < (int)vLits.size(); i++) {
+    AddClause(-vLits[i], r);
+  }
+  vLits.push_back(-r);
+  AddClause(vLits);
+}
