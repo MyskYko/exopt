@@ -84,26 +84,38 @@ void ExMan<T>::SortSels() {
 template <class T>
 void ExMan<T>::GenOne(vector<int> cands, vector<int> const &pos) {
   for(int i = 0; i < nGates; i++) {
-    vector<int> fis;
+    vector<int> fis(2);
     for(int k = 0; k <= 1; k++) {
-      vector<int> tmps;
+      vector<int> tmps(cands.size() - 1);
       for(int j = 0; j < (int)cands.size() - 1; j++) {
-        tmps.push_back(S->NewVar());
-        S->And2(cands[j + 1 - k], sels[i + i + k][j], tmps.back());
+        if(cands[j + 1 - k] == S->zero) {
+          tmps[j] = S->zero;
+        } else if(cands[j + 1 - k] == S->one) {
+          tmps[j] = sels[i + i + k][j];
+        } else {
+          tmps[j] = S->NewVar();
+          S->And2(cands[j + 1 - k], sels[i + i + k][j], tmps[j]);
+        }
       }
       int r = S->NewVar();
       S->OrN(tmps, r);
-      fis.push_back(S->NewVar());
-      S->Xor2(r, negs[i + i + k], fis.back());
+      fis[k] = S->NewVar();
+      S->Xor2(r, negs[i + i + k], fis[k]);
     }
     cands.push_back(S->NewVar());
     S->And2(fis[0], fis[1], cands.back());
   }
   for(int i = 0; i < nOutputs; i++) {
-    vector<int> tmps;
+    vector<int> tmps(cands.size());
     for(int j = 0; j < (int)cands.size(); j++) {
-      tmps.push_back(S->NewVar());
-      S->And2(cands[j], posels[i][j], tmps.back());
+      if(cands[j] == S->zero) {
+        tmps[j] = S->zero;
+      } else if(cands[j] == S->one) {
+        tmps[j] = posels[i][j];
+      } else {
+        tmps[j] = S->NewVar();
+        S->And2(cands[j], posels[i][j], tmps[j]);
+      }
     }
     int r = S->NewVar();
     S->OrN(tmps, r);
