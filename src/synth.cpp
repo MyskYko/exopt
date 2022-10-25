@@ -25,8 +25,9 @@ void ExMan<T>::GenSels() {
   sels.resize(nGates * 2);
   for(int i = 0; i < nGates * 2; i++) {
     negs[i] = S->NewVar();
+    sels[i].resize(nInputs + nExtraInputs + i/2 - 1);
     for(int j = 0; j < nInputs + nExtraInputs + i/2 - 1; j++) {
-      sels[i].push_back(S->NewVar());
+      sels[i][j] = S->NewVar();
     }
     S->Onehot(sels[i]);
   }
@@ -36,8 +37,9 @@ void ExMan<T>::GenSels() {
   posels.resize(nOutputs);
   for(int i = 0; i < nOutputs; i++) {
     ponegs[i] = S->NewVar();
+    posels[i].resize(nInputs + nExtraInputs + nGates);
     for(int j = 0; j < nInputs + nExtraInputs + nGates; j++) {
-      posels[i].push_back(S->NewVar());
+      posels[i][j] = S->NewVar();
     }
     S->Onehot(posels[i]);
   }
@@ -131,7 +133,7 @@ aigman *ExMan<T>::GetAig() {
     cands[i] = i + 1;
   }
   for(int i = 0; i < nGates; i++) {
-    vector<int> fis;
+    vector<int> fis(2);
     for(int k = 0; k <= 1; k++) {
       int j = 0;
       for(; j < (int)cands.size() - 1; j++) {
@@ -140,10 +142,12 @@ aigman *ExMan<T>::GetAig() {
         }
       }
       assert(j < (int)cands.size() - 1);
-      fis.push_back(S->Value(negs[i + i + k])? (cands[j + 1 - k] << 1) ^ 1: cands[j + 1 - k] << 1);
+      fis[k] = S->Value(negs[i + i + k])? (cands[j + 1 - k] << 1) ^ 1: cands[j + 1 - k] << 1;
     }
     cands.push_back(aig->newgate(fis[0], fis[1]));
   }
+  aig->nPos = nOutputs;
+  aig->vPos.resize(nOutputs);
   for(int i = 0; i < nOutputs; i++) {
     int j = 0;
     for(; j < (int)cands.size(); j++) {
@@ -152,8 +156,7 @@ aigman *ExMan<T>::GetAig() {
       }
     }
     assert(j < (int)cands.size());
-    aig->vPos.push_back(S->Value(ponegs[i])? (cands[j] << 1) ^ 1: cands[j] << 1);
-    aig->nPos++;
+    aig->vPos[i] = S->Value(ponegs[i])? (cands[j] << 1) ^ 1: cands[j] << 1;
   }
   return aig;
 }
