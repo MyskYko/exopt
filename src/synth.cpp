@@ -25,7 +25,7 @@ void ExMan<T>::GenSels() {
   sels.resize(nGates * 2);
   for(int i = 0; i < nGates * 2; i++) {
     negs[i] = S->NewVar();
-    for(int j = 0; j < nInputs + nExtraInputs + i/2; j++) {
+    for(int j = 0; j < nInputs + nExtraInputs + i/2 - 1; j++) {
       sels[i].push_back(S->NewVar());
     }
     S->Onehot(sels[i]);
@@ -46,7 +46,7 @@ void ExMan<T>::GenSels() {
 template <class T>
 void ExMan<T>::SortSels() {
   for(int i = 0; i < nGates; i++) {
-    for(int j = 0; j < nInputs + nExtraInputs + i; j++) {
+    for(int j = 0; j < nInputs + nExtraInputs + i - 2; j++) {
       vector<int> vLits;
       for(int k = j; k >= 0; k--) {
         vLits.push_back(sels[i + i + 1][k]);
@@ -56,7 +56,7 @@ void ExMan<T>::SortSels() {
     }
   }
   for(int i = 0; i < nGates - 1; i++) {
-    for(int j = 0; j < nInputs + nExtraInputs + i - 1; j++) {
+    for(int j = 0; j < nInputs + nExtraInputs + i - 2; j++) {
     vector<int> vLits;
       for(int k = j; k >= 0; k--) {
         vLits.push_back(sels[i + i][k]);
@@ -66,7 +66,7 @@ void ExMan<T>::SortSels() {
     }
   }
   for(int i = 0; i < nGates - 1; i++) {
-    for(int j = 1; j < nInputs + nExtraInputs + i; j++) {
+    for(int j = 1; j < nInputs + nExtraInputs + i - 1; j++) {
       for(int k = j - 1; k >= 0; k--) {
         vector<int> vLits;
         vLits.push_back(-sels[i + i][j]);
@@ -85,16 +85,16 @@ template <class T>
 void ExMan<T>::GenOne(vector<int> cands, vector<int> const &pos) {
   for(int i = 0; i < nGates; i++) {
     vector<int> fis;
-    for(int k = i + i; k <= i + i + 1; k++) {
+    for(int k = 0; k <= 1; k++) {
       vector<int> tmps;
-      for(int j = 0; j < (int)cands.size(); j++) {
+      for(int j = 0; j < (int)cands.size() - 1; j++) {
         tmps.push_back(S->NewVar());
-        S->And2(cands[j], sels[k][j], tmps.back());
+        S->And2(cands[j + 1 - k], sels[i + i + k][j], tmps.back());
       }
       int r = S->NewVar();
       S->OrN(tmps, r);
       fis.push_back(S->NewVar());
-      S->Xor2(r, negs[k], fis.back());
+      S->Xor2(r, negs[i + i + k], fis.back());
     }
     cands.push_back(S->NewVar());
     S->And2(fis[0], fis[1], cands.back());
@@ -120,21 +120,16 @@ aigman *ExMan<T>::GetAig() {
   }
   for(int i = 0; i < nGates; i++) {
     vector<int> fis;
-    for(int k = i + i; k <= i + i + 1; k++) {
+    for(int k = 0; k <= 1; k++) {
       int j = 0;
-      for(; j < (int)cands.size(); j++) {
-        if(S->Value(sels[k][j])) {
+      for(; j < (int)cands.size() - 1; j++) {
+        if(S->Value(sels[i + i + k][j])) {
           break;
         }
       }
-      assert(j < (int)cands.size());
-      if(S->Value(negs[k])) {
-        fis.push_back((cands[j] << 1) ^ 1);
-      } else {
-        fis.push_back(cands[j] << 1);
-      }
+      assert(j < (int)cands.size() - 1);
+      fis.push_back(S->Value(negs[i + i + k])? (cands[j + 1 - k] << 1) ^ 1: cands[j + 1 - k] << 1);
     }
-    assert(fis.size() == 2);
     cands.push_back(aig->newgate(fis[0], fis[1]));
   }
   for(int i = 0; i < nOutputs; i++) {
@@ -145,11 +140,7 @@ aigman *ExMan<T>::GetAig() {
       }
     }
     assert(j < (int)cands.size());
-    if(S->Value(ponegs[i])) {
-      aig->vPos.push_back((cands[j] << 1) ^ 1);
-    } else {
-      aig->vPos.push_back(cands[j] << 1);
-    }
+    aig->vPos.push_back(S->Value(ponegs[i])? (cands[j] << 1) ^ 1: cands[j] << 1);
     aig->nPos++;
   }
   return aig;
@@ -189,11 +180,7 @@ aigman *ExMan<T>::Synth(int nGates_) {
       if(br[i][j]) {
         vector<int> vLits(nOutputs);
         for(int k = 0; k < nOutputs; k++) {
-          if((j >> k) & 1) {
-            vLits[k] = pos[k];
-          } else {
-            vLits[k] = -pos[k];
-          }
+          vLits[k] = (j >> k) & 1? pos[k]: -pos[k];
         }
         tmps.push_back(S->NewVar());
         S->AndN(vLits, tmps.back());
