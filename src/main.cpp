@@ -38,6 +38,40 @@ void PrintVecWithIndex(vector<T> const &v, string prefix = "") {
   }
 }
 
+bool Optimize(aigman &aig, ExMan<KissatSolver> &exman, int nGates, vector<int> const & inputs, vector<int> const & outputs, string prefix = "") {
+  cout << prefix << "Optimize a cut of " << nGates << " gates" << endl;
+  aigman *aig2;
+  /*
+  aig2 = exman.Synth(nGates);
+  assert(aig2);
+  delete aig2;
+  */
+  if((aig2 = exman.ExSynth(nGates))) {
+    cout << prefix << "Synthesized a cut of " << aig2->nGates << " gates" << endl;
+    vector<int> outputs_shift;
+    for(int i: outputs) {
+      outputs_shift.push_back(i << 1);
+    }
+    int a = aig.nGates;
+    aig.import(aig2, inputs, outputs_shift);
+    /*
+    for(int i = 0; i < aig.nObjs; i++) {
+      if(aig.vDeads[i]) {
+        cout << i << " is dead " << endl;
+      }
+    }
+    aig.write("y.aig");
+    string cmd = "abc -q \"read y.aig; print_stats; cec " + aigname + "\"";
+    int r = system(cmd.c_str());
+    */
+    assert(a - aig.nGates >= nGates - aig2->nGates);
+    delete aig2;
+    aig.renumber();
+    return true;
+  }
+  return false;
+}
+
 int main(int argc, char **argv) {
   if(argc < 2) {
     return 1;
@@ -110,38 +144,9 @@ int main(int argc, char **argv) {
         GetBooleanRelation(aig, inputs, outputs, br);
         //PrintVecWithIndex(br);
         // synthesis
-        cout << "Optimize a cut of " << nGates << " gates" << endl;
         ExMan<KissatSolver> exman(br);
-        aigman *aig2;
-        /*
-        aig2 = exman.Synth(nGates);
-        assert(aig2);
-        delete aig2;
-        */
-        if((aig2 = exman.ExSynth(nGates))) {
-          std::cout << "Synthesized a cut of " << aig2->nGates << " gates" << std::endl;
-          fSynthesized = true;
-          std::vector<int> outputs_shift;
-          for(int i: outputs) {
-            outputs_shift.push_back(i << 1);
-          }
-          int a = aig.nGates;
-          aig.import(aig2, p.first, outputs_shift);
-          /*
-          for(int i = 0; i < aig.nObjs; i++) {
-            if(aig.vDeads[i]) {
-              cout << i << " is dead " << endl;
-            }
-          }
-          */
-          /*
-          aig.write("y.aig");
-          string cmd = "abc -q \"read y.aig; print_stats; cec " + aigname + "\"";
-          int r = system(cmd.c_str());
-          */
-          assert(a - aig.nGates >= nGates - aig2->nGates);
-          delete aig2;
-          aig.renumber();
+        fSynthesized = Optimize(aig, exman, nGates, inputs, outputs);
+        if(fSynthesized) {
           break;
         }
         continue;
@@ -195,32 +200,10 @@ int main(int argc, char **argv) {
           vector<vector<bool> > sim;
           GetSim(aig, inputs, gates_, sim);
           //PrintVecWithIndex(sim, "\t\t");
-          cout << "\t\tOptimize a cut of " << nGates2 << " gates" << endl;
           ExMan<KissatSolver> exman(br, &sim);
-          aigman *aig2;
-          /*
-          aig2 = exman.Synth(nGates2);
-          assert(aig2);
-          delete aig2;
-          */
-          if((aig2 = exman.ExSynth(nGates2))) {
-            std::cout << "\t\tSynthesized a cut of " << aig2->nGates << " gates" << std::endl;
-            fSynthesized = true;
-            std::vector<int> outputs_shift;
-            for(int j: outputs2) {
-              outputs_shift.push_back(j << 1);
-            }
-            int a = aig.nGates;
-            gates_.insert(gates_.begin(), inputs.begin(), inputs.end());
-            aig.import(aig2, gates_, outputs_shift);
-            /*
-            aig.write("y.aig");
-            string cmd = "abc -q \"read y.aig; print_stats; cec " + aigname + "\"";
-            int r = system(cmd.c_str());
-            */
-            assert(a - aig.nGates >= nGates2 - aig2->nGates);
-            delete aig2;
-            aig.renumber();
+          gates_.insert(gates_.begin(), inputs.begin(), inputs.end());
+          fSynthesized = Optimize(aig, exman, nGates2, gates_, outputs2, "\t\t");
+          if(fSynthesized) {
             break;
           }
         }
