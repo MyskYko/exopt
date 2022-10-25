@@ -26,8 +26,8 @@ void CutEnumeration(aigman const &aig, vector<vector<Cut> > &cuts, unsigned cuts
   for(int i = aig.nPis + 1; i < aig.nObjs; i++) {
     int i0 = aig.vObjs[i + i] >> 1;
     int i1 = aig.vObjs[i + i + 1] >> 1;
-    for(auto &cut0: cuts[i0]) {
-      for(auto &cut1: cuts[i1]) {
+    for(auto const &cut0: cuts[i0]) {
+      for(auto const &cut1: cuts[i1]) {
         Cut new_cut;
         auto &leaves = new_cut.leaves;
         auto &signature = new_cut.signature;
@@ -43,7 +43,7 @@ void CutEnumeration(aigman const &aig, vector<vector<Cut> > &cuts, unsigned cuts
         }
         // skip if dominated
         bool dominated = false;
-        for(auto &cut: cuts[i]) {
+        for(auto const &cut: cuts[i]) {
           if(Dominate(cut, new_cut)) {
             dominated = true;
             break;
