@@ -38,8 +38,8 @@ void PrintVecWithIndex(vector<T> const &v, string prefix = "") {
   }
 }
 
-bool Optimize(aigman &aig, ExMan<KissatSolver> &exman, int nGates, vector<int> const & inputs, vector<int> const & outputs, string prefix = "") {
-  cout << prefix << "Optimize a cut of " << nGates << " gates" << endl;
+bool Synthesize(aigman &aig, ExMan<KissatSolver> &exman, int nGates, vector<int> const & inputs, vector<int> const & outputs, string prefix = "") {
+  cout << prefix << "Synthesizing with less than " << nGates << " gates" << endl;
   aigman *aig2;
   /*
   aig2 = exman.Synth(nGates);
@@ -47,28 +47,33 @@ bool Optimize(aigman &aig, ExMan<KissatSolver> &exman, int nGates, vector<int> c
   delete aig2;
   */
   if((aig2 = exman.ExSynth(nGates))) {
-    cout << prefix << "Synthesized a cut of " << aig2->nGates << " gates" << endl;
+    cout << prefix << "Synthesized with " << aig2->nGates << " gates" << endl;
     vector<int> outputs_shift;
     for(int i: outputs) {
       outputs_shift.push_back(i << 1);
     }
-    int a = aig.nGates;
+    int nGatesAll = aig.nGates;
     aig.import(aig2, inputs, outputs_shift);
-    /*
+    cout << prefix << "Replaced gates : ";
+    string delim;
     for(int i = 0; i < aig.nObjs; i++) {
       if(aig.vDeads[i]) {
-        cout << i << " is dead " << endl;
+        cout << delim << i;
+        delim = ", ";
       }
     }
+    cout << endl;
+    /*
     aig.write("y.aig");
     string cmd = "abc -q \"read y.aig; print_stats; cec " + aigname + "\"";
     int r = system(cmd.c_str());
     */
-    assert(a - aig.nGates >= nGates - aig2->nGates);
+    assert(nGatesAll - aig.nGates >= nGates - aig2->nGates);
     delete aig2;
     aig.renumber();
     return true;
   }
+  cout << prefix << "* Synthesis failed" << endl;
   return false;
 }
 
@@ -135,8 +140,9 @@ int main(int argc, char **argv) {
       auto const &outputs = get<1>(p.second);
       const bool fReach = get<2>(p.second);
       int nGates = gates.size();
-      cout << inputs << " : " << gates << endl;
-      cout << inputs << " : " << outputs << endl;
+      cout << "Inputs : " << inputs << endl;
+      cout << "Gates : " << gates << endl;
+      cout << "Outputs : " << outputs << endl;
       // single window mode
       if(!fReach && nGates <= 7) {
         // get relation
@@ -145,17 +151,17 @@ int main(int argc, char **argv) {
         //PrintVecWithIndex(br);
         // synthesis
         ExMan<KissatSolver> exman(br);
-        fSynthesized = Optimize(aig, exman, nGates, inputs, outputs);
+        fSynthesized = Synthesize(aig, exman, nGates, inputs, outputs);
         if(fSynthesized) {
           break;
         }
         continue;
       }
-      // sub-window mode
+      // subwindow mode
       for(int i: outputs) {
-        cout << "\tFanin cone of " << i << endl;
+        cout << "\tSubwindow of " << i << endl;
         if(aig.reach(vector<int>{i}, inputs)) {
-          cout << "\tSkipped due to potential loops" << endl;
+          cout << "\t* Skipped due to potential loops" << endl;
           continue;
         }
         for(auto const &cut: cuts[i]) {
@@ -168,24 +174,24 @@ int main(int argc, char **argv) {
           auto const &outputs2 = get<1>(p2);
           const bool fReach2 = get<2>(p2);
           int nGates2 = gates2.size();
-          cout << "\t\t" << inputs2 << " : " <<  gates2 << endl;
+          cout << "\t\tInputs : " << inputs2 << endl;
+          cout << "\t\tGates : " <<  gates2 << endl;
+          cout << "\t\tOutputs : " <<  outputs2 << endl;
           if(nGates2 > 7) {
-            cout << "\t\tSkipped because the cone has more than 7 gates" << endl;
+            cout << "\t\t* Skipped because subwindow has more than 7 gates" << endl;
+            continue;
+          }
+          if(fReach2 || aig.reach(outputs2, inputs)) {
+            cout << "\t\t* Skipped due to potential loops" << endl;
             continue;
           }
           if(!includes(gates.begin(), gates.end(), gates2.begin(), gates2.end())) {
-            cout << "\t\tSkipped because the cone is not included" << endl;
-            continue;
-          }
-          cout << "\t\t" << inputs2 << " : " <<  outputs2 << endl;
-          // should be switched
-          if(fReach2 || aig.reach(outputs2, inputs)) {
-            cout << "\t\tSkipped due to potential loops" << endl;
+            cout << "\t\t* Skipped because subwindow is not included" << endl;
             continue;
           }
           vector<int> gates_(nGates);
           gates_.resize(set_difference(gates.begin(), gates.end(), gates2.begin(), gates2.end(), gates_.begin()) - gates_.begin());
-          cout << "\t\tGates outside of the cone : " << gates_ << endl;
+          cout << "\t\tOutside gates : " << gates_ << endl;
           for(auto it = gates_.begin(); it != gates_.end();) {
             if(aig.reach(outputs2, vector<int>{*it})) {
               it = gates_.erase(it);
@@ -202,7 +208,7 @@ int main(int argc, char **argv) {
           //PrintVecWithIndex(sim, "\t\t");
           ExMan<KissatSolver> exman(br, &sim);
           gates_.insert(gates_.begin(), inputs.begin(), inputs.end());
-          fSynthesized = Optimize(aig, exman, nGates2, gates_, outputs2, "\t\t");
+          fSynthesized = Synthesize(aig, exman, nGates2, gates_, outputs2, "\t\t");
           if(fSynthesized) {
             break;
           }
