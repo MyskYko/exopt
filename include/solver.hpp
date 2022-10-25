@@ -24,7 +24,7 @@ private:
 protected:
   bool fDirect;
 
-  Solver(): fDirect(true) {}
+  Solver(): fDirect(true), zero(0x7fffffff), one(-0x7fffffff) {}
 
   void Bimander(std::vector<int> const &vLits, int nbim);
 
@@ -33,6 +33,9 @@ protected:
   void PairwiseSel(std::vector<int> const &invars, std::vector<int> &outvars, int k);
 
 public:
+  int zero;
+  int one;
+
   virtual ~Solver() {}
 
   virtual int NewVar() = 0;

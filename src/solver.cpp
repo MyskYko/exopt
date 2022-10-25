@@ -126,8 +126,6 @@ void Solver::PwSort(std::vector<int> const &a, std::vector<int> &d) {
 void Solver::PwNet(std::vector<int> vLits, std::vector<int> &res) {
   int n = pow2roundup(vLits.size());
   if((int)vLits.size() != n) {
-    int zero = NewVar();
-    AddClause(-zero);
     vLits.resize(n, zero);
   }
   PwSort(vLits, res);
