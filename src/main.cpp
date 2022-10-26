@@ -81,6 +81,8 @@ int main(int argc, char **argv) {
   if(argc < 2) {
     return 1;
   }
+  int cutsize = 6;
+  int windowsize = 6;
   string aigname = argv[1];
   aigman aig(aigname);
   aig.supportfanouts();
@@ -89,7 +91,7 @@ int main(int argc, char **argv) {
     fSynthesized = false;
     // cut enumeration
     vector<vector<Cut> > cuts;
-    CutEnumeration(aig, cuts);
+    CutEnumeration(aig, cuts, cutsize);
     //PrintVecWithIndex(cuts);
     // cut to gates
     map<vector<int>, vector<int> > mGates;
@@ -114,105 +116,101 @@ int main(int argc, char **argv) {
       }
     }
     // windows
-    map<vector<int>, tuple<vector<int>, vector<int>, bool> > mWindows;
-    for(auto const &p: mGates) {
+    vector<tuple<vector<int>, vector<int>, vector<int> > > vWindows;
+    for(auto it = mGates.begin(); it != mGates.end();) {
+      if((int)it->second.size() > windowsize) {
+        it++;
+        continue;
+      }
       aig.vValues.clear();
       aig.vValues.resize(aig.nObjs);
-      for(int i: p.second) {
+      for(int i: it->second) {
         for(int ii = i + i; ii <= i + i + 1; ii++) {
           aig.vValues[aig.vObjs[ii] >> 1]++;
         }
       }
-      auto outputs = p.second;
-      for(auto it = outputs.begin(); it != outputs.end();) {
-        if((int)aig.vvFanouts[*it].size() == aig.vValues[*it]) {
-          it = outputs.erase(it);
+      auto outputs = it->second;
+      for(auto it2 = outputs.begin(); it2 != outputs.end();) {
+        if((int)aig.vvFanouts[*it2].size() == aig.vValues[*it2]) {
+          it2 = outputs.erase(it2);
           continue;
         }
-        it++;
+        it2++;
       }
-      mWindows[p.first] = make_tuple(p.second, outputs, aig.reach(outputs, p.first));
+      if(aig.reach(outputs, it->first)) {
+        it++;
+        continue;
+      }
+      vWindows.push_back(make_tuple(it->first, it->second, outputs));
+      it = mGates.erase(it);
     }
     // for each window
-    for(auto const &p: mWindows) {
-      auto const &inputs = p.first;
-      auto const &gates = get<0>(p.second);
-      auto const &outputs = get<1>(p.second);
-      const bool fReach = get<2>(p.second);
+    for(auto const &p: vWindows) {
+      auto const &inputs = get<0>(p);
+      auto const &gates = get<1>(p);
+      auto const &outputs = get<2>(p);
       int nGates = gates.size();
       cout << "Inputs : " << inputs << endl;
       cout << "Gates : " << gates << endl;
       cout << "Outputs : " << outputs << endl;
-      // single window mode
-      if(!fReach && nGates <= 7) {
-        // get relation
-        vector<vector<bool> > br;
-        GetBooleanRelation(aig, inputs, outputs, br);
-        //PrintVecWithIndex(br);
-        // synthesis
-        ExMan<KissatSolver> exman(br);
-        fSynthesized = Synthesize(aig, exman, nGates, inputs, outputs);
-        if(fSynthesized) {
-          break;
-        }
-        continue;
+      // get relation
+      vector<vector<bool> > br;
+      GetBooleanRelation(aig, inputs, outputs, br);
+      //PrintVecWithIndex(br);
+      // synthesis
+      ExMan<KissatSolver> exman(br);
+      fSynthesized = Synthesize(aig, exman, nGates, inputs, outputs);
+      if(fSynthesized) {
+        break;
       }
-      // subwindow mode
-      for(int i: outputs) {
-        cout << "\tSubwindow of " << i << endl;
-        if(aig.reach(vector<int>{i}, inputs)) {
-          cout << "\t* Skipped due to potential loops" << endl;
+      continue;
+    }
+    if(fSynthesized) {
+      continue;
+    }
+    // for each remaining cut
+    for(auto const &p: mGates) {
+      auto const &inputs = get<0>(p);
+      auto const &gates = get<1>(p);
+      int nGates = gates.size();
+      cout << "Inputs : " << inputs << endl;
+      cout << "Gates : " << gates << endl;
+      // for each window
+      for(auto const&q: vWindows) {
+        auto const &inputs2 = get<0>(q);
+        auto const &gates2 = get<1>(q);
+        auto const &outputs2 = get<2>(q);
+        int nGates2 = gates2.size();
+        if(!includes(gates.begin(), gates.end(), gates2.begin(), gates2.end())) {
           continue;
         }
-        for(auto const &cut: cuts[i]) {
-          auto const &inputs2 = cut.leaves;
-          if(inputs2 == inputs || inputs2.size() == 1) {
-            continue;
-          }
-          auto const &p2 = mWindows[inputs2];
-          auto const &gates2 = get<0>(p2);
-          auto const &outputs2 = get<1>(p2);
-          const bool fReach2 = get<2>(p2);
-          int nGates2 = gates2.size();
-          cout << "\t\tInputs : " << inputs2 << endl;
-          cout << "\t\tGates : " <<  gates2 << endl;
-          cout << "\t\tOutputs : " <<  outputs2 << endl;
-          if(nGates2 > 7) {
-            cout << "\t\t* Skipped because subwindow has more than 7 gates" << endl;
-            continue;
-          }
-          if(fReach2 || aig.reach(outputs2, inputs)) {
-            cout << "\t\t* Skipped due to potential loops" << endl;
-            continue;
-          }
-          if(!includes(gates.begin(), gates.end(), gates2.begin(), gates2.end())) {
-            cout << "\t\t* Skipped because subwindow is not included" << endl;
-            continue;
-          }
-          vector<int> gates_(nGates);
-          gates_.resize(set_difference(gates.begin(), gates.end(), gates2.begin(), gates2.end(), gates_.begin()) - gates_.begin());
-          cout << "\t\tOutside gates : " << gates_ << endl;
-          for(auto it = gates_.begin(); it != gates_.end();) {
-            if(aig.reach(outputs2, vector<int>{*it})) {
-              it = gates_.erase(it);
-              continue;
-            }
-            it++;
-          }
-          cout << "\t\tExtra inputs : " << gates_ << endl;
-          vector<vector<bool> > br;
-          GetBooleanRelation(aig, inputs, outputs2, br);
-          //PrintVecWithIndex(br, "\t\t");
-          vector<vector<bool> > sim;
-          GetSim(aig, inputs, gates_, sim);
-          //PrintVecWithIndex(sim, "\t\t");
-          ExMan<KissatSolver> exman(br, &sim);
-          gates_.insert(gates_.begin(), inputs.begin(), inputs.end());
-          fSynthesized = Synthesize(aig, exman, nGates2, gates_, outputs2, "\t\t");
-          if(fSynthesized) {
-            break;
-          }
+        cout << "\t\tInputs : " << inputs2 << endl;
+        cout << "\t\tGates : " <<  gates2 << endl;
+        cout << "\t\tOutputs : " <<  outputs2 << endl;
+        if(aig.reach(outputs2, inputs)) {
+          cout << "\t\t* Skipped due to potential loops" << endl;
+          continue;
         }
+        vector<int> gates_(nGates);
+        gates_.resize(set_difference(gates.begin(), gates.end(), gates2.begin(), gates2.end(), gates_.begin()) - gates_.begin());
+        cout << "\t\tOutside gates : " << gates_ << endl;
+        for(auto it = gates_.begin(); it != gates_.end();) {
+          if(aig.reach(outputs2, vector<int>{*it})) {
+            it = gates_.erase(it);
+            continue;
+          }
+          it++;
+        }
+        cout << "\t\tExtra inputs : " << gates_ << endl;
+        vector<vector<bool> > br;
+        GetBooleanRelation(aig, inputs, outputs2, br);
+        //PrintVecWithIndex(br, "\t\t");
+        vector<vector<bool> > sim;
+        GetSim(aig, inputs, gates_, sim);
+        //PrintVecWithIndex(sim, "\t\t");
+        ExMan<KissatSolver> exman(br, &sim);
+        gates_.insert(gates_.begin(), inputs.begin(), inputs.end());
+        fSynthesized = Synthesize(aig, exman, nGates2, gates_, outputs2, "\t\t");
         if(fSynthesized) {
           break;
         }
