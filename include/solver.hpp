@@ -64,6 +64,11 @@ public:
   inline void Xor2(int a, int b, int c);
   inline void AndN(std::vector<int> vLits, int r);
   inline void OrN(std::vector<int> vLits, int r);
+
+  inline int And2(int a, int b);
+  inline int Xor2(int a, int b);
+  inline int AndN(std::vector<int> const &vLits);
+  inline int OrN(std::vector<int> const &vLits);
 };
 
 int Solver::NewVar() {
@@ -196,4 +201,75 @@ void Solver::OrN(std::vector<int> vLits, int r) {
   }
   vLits.push_back(-r);
   AddClause(vLits);
+}
+
+int Solver::And2(int a, int b) {
+  int c;
+  if(a == zero || b == zero) {
+    c = zero;
+  } else if(a == one) {
+    c = b;
+  } else if(b == one) {
+    c = a;
+  } else {
+    c = NewVar();
+    And2(a, b, c);
+  }
+  return c;
+}
+int Solver::Xor2(int a, int b) {
+  int c;
+  if(a == zero) {
+    c = b;
+  } else if(a == one) {
+    c = -b;
+  } else if(b == zero) {
+    c = a;
+  } else if(b == one) {
+    c = -a;
+  } else {
+    c = NewVar();
+    Xor2(a, b, c);
+  }
+  return c;
+}
+int Solver::AndN(std::vector<int> const &vLits) {
+  std::vector<int> vLits2(vLits.size());
+  int j = 0;
+  for(int i = 0; i < (int)vLits.size(); i++) {
+    if(vLits[i] == one) {
+      continue;
+    }
+    if(vLits[i] == zero) {
+      return zero;
+    }
+    vLits2[j++] = vLits[i];
+  }
+  if(!j) {
+    return one;
+  }
+  vLits2.resize(j);
+  int r = NewVar();
+  AndN(vLits2, r);
+  return r;
+}
+int Solver::OrN(std::vector<int> const &vLits) {
+  std::vector<int> vLits2(vLits.size());
+  int j = 0;
+  for(int i = 0; i < (int)vLits.size(); i++) {
+    if(vLits[i] == one) {
+      return one;
+    }
+    if(vLits[i] == zero) {
+      continue;
+    }
+    vLits2[j++] = vLits[i];
+  }
+  if(!j) {
+    return zero;
+  }
+  vLits2.resize(j);
+  int r = NewVar();
+  OrN(vLits, r);
+  return r;
 }
