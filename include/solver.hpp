@@ -56,9 +56,9 @@ public:
 
   inline bool Value(int i);
 
-  inline void AMO(std::vector<int> vLits);
+  inline void AMO(std::vector<int> const &vLits);
   inline void Onehot(std::vector<int> const &vLits);
-  inline void AMK(std::vector<int> vLits, int k);
+  inline void AMK(std::vector<int> const &vLits, int k);
   
   inline void And2(int a, int b, int c);
   inline void Xor2(int a, int b, int c);
@@ -105,61 +105,73 @@ bool Solver::Value(int i) {
   return Value_(i);
 }
 
-void Solver::AMO(std::vector<int> vLits) {
+void Solver::AMO(std::vector<int> const &vLits) {
+  std::vector<int> vLits2(vLits.size());
+  int j = 0;
   bool fOne = false;
-  for(std::vector<int>::iterator it = vLits.begin(); it != vLits.end();) {
-    if(*it == one) {
+  for(int i = 0; i < (int)vLits.size(); i++) {
+    if(vLits[i] == one) {
       if(fOne) {
-        AddClause(zero);
+        AddClause_(std::vector<int>());
         return;
       }
       fOne = true;
-      it = vLits.erase(it);
       continue;
     }
-    if(*it == zero) {
-      it = vLits.erase(it);
+    if(vLits[i] == zero) {
       continue;
     }
-    it++;
+    vLits2[j++] = vLits[i];
   }
   if(fOne) {
-    for(std::vector<int>::iterator it = vLits.begin(); it != vLits.end(); it++) {
-      AddClause(-*it);
+    for(int i = 0; i < j; i++) {
+      AddClause_(std::vector<int>{-vLits2[i]});
     }
     return;
   }
-  AMO_(vLits);
+  vLits2.resize(j);
+  AMO_(vLits2);
 }
 void Solver::Onehot(std::vector<int> const &vLits) {
   AMO(vLits);
   AddClause(vLits);
 }
-void Solver::AMK(std::vector<int> vLits, int k) {
-  for(std::vector<int>::iterator it = vLits.begin(); it != vLits.end();) {
-    if(*it == one) {
+void Solver::AMK(std::vector<int> const &vLits, int k) {
+  if(k < 0) {
+    AddClause_(std::vector<int>());
+    return;
+  }
+  std::vector<int> vLits2(vLits.size());
+  int j = 0;
+  for(int i = 0; i < (int)vLits.size(); i++) {
+    if(vLits[i] == one) {
       if(!k) {
-        AddClause(zero);
+        AddClause_(std::vector<int>());
         return;
       }
       k--;
-      it = vLits.erase(it);
       continue;
     }
-    if(*it == zero) {
-      it = vLits.erase(it);
+    if(vLits[i] == zero) {
       continue;
     }
-    it++;
+    vLits2[j++] = vLits[i];
   }
-  if((int)vLits.size() <= k) {
+  if(j <= k) {
     return;
   }
+  if(!k) {
+    for(int i = 0; i < j; i++) {
+      AddClause_(std::vector<int>{-vLits2[i]});
+    }
+    return;
+  }
+  vLits2.resize(j);
   if(k == 1) {
-    AMO_(vLits);
-    return;
+    AMO_(vLits2);
+  } else {
+    AMK_(vLits2, k);
   }
-  AMK_(vLits, k);
 }
 
 void Solver::And2(int a, int b, int c) {
