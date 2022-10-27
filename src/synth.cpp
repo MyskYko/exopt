@@ -108,37 +108,19 @@ void ExMan<T>::GenOne(vector<int> cands, vector<int> const &pos) {
     for(int k = 0; k <= 1; k++) {
       vector<int> tmps(cands.size() - 1);
       for(int j = 0; j < (int)cands.size() - 1; j++) {
-        if(cands[j + 1 - k] == S->zero) {
-          tmps[j] = S->zero;
-        } else if(cands[j + 1 - k] == S->one) {
-          tmps[j] = sels[i + i + k][j];
-        } else {
-          tmps[j] = S->NewVar();
-          S->And2(cands[j + 1 - k], sels[i + i + k][j], tmps[j]);
-        }
+        tmps[j] = S->And2(cands[j + 1 - k], sels[i + i + k][j]);
       }
-      int r = S->NewVar();
-      S->OrN(tmps, r);
-      fis[k] = S->NewVar();
-      S->Xor2(r, negs[i + i + k], fis[k]);
+      int r = S->OrN(tmps);
+      fis[k] = S->Xor2(r, negs[i + i + k]);
     }
-    cands.push_back(S->NewVar());
-    S->And2(fis[0], fis[1], cands.back());
+    cands.push_back(S->And2(fis[0], fis[1]));
   }
   for(int i = 0; i < nOutputs; i++) {
     vector<int> tmps(cands.size());
     for(int j = 0; j < (int)cands.size(); j++) {
-      if(cands[j] == S->zero) {
-        tmps[j] = S->zero;
-      } else if(cands[j] == S->one) {
-        tmps[j] = posels[i][j];
-      } else {
-        tmps[j] = S->NewVar();
-        S->And2(cands[j], posels[i][j], tmps[j]);
-      }
+      tmps[j] = S->And2(cands[j], posels[i][j]);
     }
-    int r = S->NewVar();
-    S->OrN(tmps, r);
+    int r = S->OrN(tmps);
     S->Xor2(r, ponegs[i], pos[i]);
   }
 }
@@ -215,8 +197,7 @@ aigman *ExMan<T>::Synth(int nGates_) {
         for(int k = 0; k < nOutputs; k++) {
           vLits[k] = (j >> k) & 1? pos[k]: -pos[k];
         }
-        tmps.push_back(S->NewVar());
-        S->AndN(vLits, tmps.back());
+        tmps.push_back(S->AndN(vLits));
       }
     }
     S->AddClause(tmps);
