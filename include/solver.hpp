@@ -49,7 +49,7 @@ public:
 
   inline int NewVar();
 
-  inline void AddClause(std::vector<int> vLits);
+  inline void AddClause(std::vector<int> const &vLits);
   inline void AddClause(int a);
   inline void AddClause(int a, int b);
   inline void AddClause(int a, int b, int c);
@@ -70,18 +70,20 @@ int Solver::NewVar() {
   return ++nVars;
 }
 
-void Solver::AddClause(std::vector<int> vLits) {
-  for(std::vector<int>::iterator it = vLits.begin(); it != vLits.end();) {
-    if(*it == one) {
+void Solver::AddClause(std::vector<int> const &vLits) {
+  std::vector<int> vLits2(vLits.size());
+  int j = 0;
+  for(int i = 0; i < (int)vLits.size(); i++) {
+    if(vLits[i] == one) {
       return;
     }
-    if(*it == zero) {
-      it = vLits.erase(it);
+    if(vLits[i] == zero) {
       continue;
     }
-    it++;
+    vLits2[j++] = vLits[i];
   }
-  AddClause_(vLits);
+  vLits2.resize(j);
+  AddClause_(vLits2);
 }
 void Solver::AddClause(int a) {
   AddClause(std::vector<int>{a});
