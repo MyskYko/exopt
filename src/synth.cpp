@@ -49,34 +49,34 @@ template <class T>
 void ExMan<T>::SortSels() {
   for(int i = 0; i < nGates; i++) {
     for(int j = 0; j < nInputs + nExtraInputs + i - 2; j++) {
-      vector<int> vLits;
-      for(int k = j; k >= 0; k--) {
-        vLits.push_back(sels[i + i + 1][k]);
+      vector<int> vLits(j + 2);
+      for(int k = 0; k <= j; k++) {
+        vLits[k] = sels[i + i + 1][k];
       }
-      vLits.push_back(-sels[i + i][j]);
+      vLits[j + 1] = -sels[i + i][j];
       S->AddClause(vLits);
     }
   }
   for(int i = 0; i < nGates - 1; i++) {
     for(int j = 0; j < nInputs + nExtraInputs + i - 2; j++) {
-    vector<int> vLits;
-      for(int k = j; k >= 0; k--) {
-        vLits.push_back(sels[i + i][k]);
+      vector<int> vLits(j + 2);
+      for(int k = 0; k <= j; k++) {
+        vLits[k] = sels[i + i][k];
       }
-      vLits.push_back(-sels[i + i + 2][j]);
+      vLits[j + 1] = -sels[i + i + 2][j];
       S->AddClause(vLits);
     }
   }
   for(int i = 0; i < nGates - 1; i++) {
     for(int j = 1; j < nInputs + nExtraInputs + i - 1; j++) {
-      for(int k = j - 1; k >= 0; k--) {
-        vector<int> vLits;
-        vLits.push_back(-sels[i + i][j]);
-        vLits.push_back(-sels[i + i + 2][j]);
-        for(int l = k; l >= 0; l--) {
-          vLits.push_back(sels[i + i + 1][l]);
+      for(int k = 0; k < j; k++) {
+        vector<int> vLits(k + 4);
+        for(int l = 0; l <= k; l++) {
+          vLits[l] = sels[i + i + 1][l];
         }
-        vLits.push_back(-sels[i + i + 3][k]);
+        vLits[k + 1] = -sels[i + i + 3][k];
+        vLits[k + 2] = -sels[i + i][j];
+        vLits[k + 3] = -sels[i + i + 2][j];
         S->AddClause(vLits);
       }
     }
@@ -103,21 +103,22 @@ void ExMan<T>::SortSels() {
 
 template <class T>
 void ExMan<T>::GenOne(vector<int> cands, vector<int> const &pos) {
+  cands.resize(nInputs + nExtraInputs + nGates);
   for(int i = 0; i < nGates; i++) {
     vector<int> fis(2);
     for(int k = 0; k <= 1; k++) {
-      vector<int> tmps(cands.size() - 1);
-      for(int j = 0; j < (int)cands.size() - 1; j++) {
+      vector<int> tmps(nInputs + nExtraInputs + i - 1);
+      for(int j = 0; j < nInputs + nExtraInputs + i - 1; j++) {
         tmps[j] = S->And2(cands[j + 1 - k], sels[i + i + k][j]);
       }
       int r = S->OrN(tmps);
       fis[k] = S->Xor2(r, negs[i + i + k]);
     }
-    cands.push_back(S->And2(fis[0], fis[1]));
+    cands[nInputs + nExtraInputs + i] = S->And2(fis[0], fis[1]);
   }
   for(int i = 0; i < nOutputs; i++) {
-    vector<int> tmps(cands.size());
-    for(int j = 0; j < (int)cands.size(); j++) {
+    vector<int> tmps(nInputs + nExtraInputs + nGates);
+    for(int j = 0; j < nInputs + nExtraInputs + nGates; j++) {
       tmps[j] = S->And2(cands[j], posels[i][j]);
     }
     int r = S->OrN(tmps);
@@ -128,7 +129,7 @@ void ExMan<T>::GenOne(vector<int> cands, vector<int> const &pos) {
 template <class T>
 aigman *ExMan<T>::GetAig() {
   aigman *aig = new aigman(nInputs + nExtraInputs, 0);
-  vector<int> cands(nInputs + nExtraInputs);
+  vector<int> cands(nInputs + nExtraInputs + nGates);
   for(int i = 0; i < nInputs + nExtraInputs; i++) {
     cands[i] = i + 1;
   }
@@ -136,26 +137,26 @@ aigman *ExMan<T>::GetAig() {
     vector<int> fis(2);
     for(int k = 0; k <= 1; k++) {
       int j = 0;
-      for(; j < (int)cands.size() - 1; j++) {
+      for(; j < nInputs + nExtraInputs + i - 1; j++) {
         if(S->Value(sels[i + i + k][j])) {
           break;
         }
       }
-      assert(j < (int)cands.size() - 1);
+      assert(j < nInputs + nExtraInputs + i - 1);
       fis[k] = S->Value(negs[i + i + k])? (cands[j + 1 - k] << 1) ^ 1: cands[j + 1 - k] << 1;
     }
-    cands.push_back(aig->newgate(fis[0], fis[1]));
+    cands[nInputs + nExtraInputs + i] = aig->newgate(fis[0], fis[1]);
   }
   aig->nPos = nOutputs;
   aig->vPos.resize(nOutputs);
   for(int i = 0; i < nOutputs; i++) {
     int j = 0;
-    for(; j < (int)cands.size(); j++) {
+    for(; j < nInputs + nExtraInputs + nGates; j++) {
       if(S->Value(posels[i][j])) {
         break;
       }
     }
-    assert(j < (int)cands.size());
+    assert(j < nInputs + nExtraInputs + nGates);
     aig->vPos[i] = S->Value(ponegs[i])? (cands[j] << 1) ^ 1: cands[j] << 1;
   }
   return aig;
