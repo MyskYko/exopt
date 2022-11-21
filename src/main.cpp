@@ -78,12 +78,13 @@ bool Synthesize(aigman &aig, ExMan<KissatSolver> &exman, int nGates, vector<int>
 }
 
 int main(int argc, char **argv) {
-  if(argc < 2) {
+  if(argc <= 2) {
     return 1;
   }
   int cutsize = 6;
   int windowsize = 6;
   string aigname = argv[1];
+  string outname = argv[2];
   aigman aig(aigname);
   aig.supportfanouts();
   bool fSynthesized = true;
@@ -220,6 +221,6 @@ int main(int argc, char **argv) {
       }
     }
   }
-  aig.write("z.aig");
+  aig.write(outname);
   return 0;
 }
