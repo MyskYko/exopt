@@ -8,6 +8,8 @@
 
 #include <cassert>
 
+#include <argparse/argparse.hpp>
+
 #include <aig.hpp>
 
 #include "cut.hpp"
@@ -78,13 +80,23 @@ bool Synthesize(aigman &aig, ExMan<KissatSolver> &exman, int nGates, vector<int>
 }
 
 int main(int argc, char **argv) {
-  if(argc <= 2) {
+  argparse::ArgumentParser ap("exopt");
+  ap.add_argument("input");
+  ap.add_argument("output");
+  ap.add_argument("-k", "--cutsize").default_value(6).scan<'i', int>();
+  ap.add_argument("-n", "--windowsize").default_value(6).scan<'i', int>();
+  try {
+    ap.parse_args(argc, argv);
+  }
+  catch (const runtime_error& err) {
+    cerr << err.what() << endl;
+    cerr << ap;
     return 1;
   }
-  int cutsize = 6;
-  int windowsize = 6;
-  string aigname = argv[1];
-  string outname = argv[2];
+  string aigname = ap.get<string>("input");
+  string outname = ap.get<string>("output");
+  int cutsize = ap.get<int>("--cutsize");
+  int windowsize = ap.get<int>("--windowsize");
   aigman aig(aigname);
   aig.supportfanouts();
   bool fSynthesized = true;
@@ -221,6 +233,7 @@ int main(int argc, char **argv) {
       }
     }
   }
+  cout << aig.nGates << endl;
   aig.write(outname);
   return 0;
 }
