@@ -41,7 +41,7 @@ void ExMan<T>::GenSels() {
     for(int j = 0; j < nInputs + nExtraInputs + nGates; j++) {
       posels[i][j] = S->NewVar();
     }
-    S->Onehot(posels[i]);
+    S->AMO(posels[i]);
   }
 }
 
@@ -156,8 +156,9 @@ aigman *ExMan<T>::GetAig() {
         break;
       }
     }
-    assert(j < nInputs + nExtraInputs + nGates);
-    aig->vPos[i] = S->Value(ponegs[i])? (cands[j] << 1) ^ 1: cands[j] << 1;
+    assert(j <= nInputs + nExtraInputs + nGates);
+    int val = (j == nInputs + nExtraInputs + nGates)? 0: cands[j] << 1;
+    aig->vPos[i] = val ^ (int)S->Value(ponegs[i]);
   }
   return aig;
 }
@@ -215,9 +216,9 @@ aigman *ExMan<T>::Synth(int nGates_) {
 
 template <class T>
 aigman *ExMan<T>::ExSynth(int nGates_) {
-  assert(nGates_);
+  assert(nGates_>= 0);
   aigman *aig = NULL;
-  while(--nGates_) {
+  while(--nGates_ >= 0) {
     aigman *aig2 = Synth(nGates_);
     if(!aig2) {
       break;
