@@ -181,7 +181,25 @@ int main(int argc, char **argv) {
     if(fSynthesized) {
       continue;
     }
-    // for each remaining cut
+    // large cuts
+    for(auto it = mGates.begin(); it != mGates.end();) {
+      bool fIncluded = false;
+      for(auto it2 = mGates.begin(); it2 != mGates.end(); it2++){
+        if(it == it2) {
+          continue;
+        }
+        if(includes(it2->second.begin(), it2->second.end(), it->second.begin(), it->second.end())) {
+          fIncluded = true;
+          break;
+        }
+      }
+      if(fIncluded) {
+        it = mGates.erase(it);
+      } else {
+        it++;
+      }
+    }
+    // for each large cut
     for(auto const &p: mGates) {
       auto const &inputs = get<0>(p);
       auto const &gates = get<1>(p);
