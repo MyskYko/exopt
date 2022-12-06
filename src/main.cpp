@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
   argparse::ArgumentParser ap("exopt");
   ap.add_argument("input");
   ap.add_argument("output");
-  ap.add_argument("-k", "--cutsize").default_value(6).scan<'i', int>();
+  ap.add_argument("-k", "--cutsize").default_value(8).scan<'i', int>();
   ap.add_argument("-n", "--windowsize").default_value(6).scan<'i', int>();
   try {
     ap.parse_args(argc, argv);
@@ -98,6 +98,7 @@ int main(int argc, char **argv) {
   int cutsize = ap.get<int>("--cutsize");
   int windowsize = ap.get<int>("--windowsize");
   aigman aig(aigname);
+  bool fAllDivisors = false; //aig.nPis < 10;
   aig.supportfanouts();
   bool fSynthesized = true;
   while(fSynthesized) {
@@ -182,21 +183,34 @@ int main(int argc, char **argv) {
       continue;
     }
     // large cuts
-    for(auto it = mGates.begin(); it != mGates.end();) {
-      bool fIncluded = false;
-      for(auto it2 = mGates.begin(); it2 != mGates.end(); it2++){
-        if(it == it2) {
-          continue;
-        }
-        if(includes(it2->second.begin(), it2->second.end(), it->second.begin(), it->second.end())) {
-          fIncluded = true;
-          break;
-        }
+    if(fAllDivisors) {
+      mGates.clear();
+      vector<int> inputs;
+      for(int i = 0; i < aig.nPis; i++) {
+        inputs.push_back(i + 1);
       }
-      if(fIncluded) {
-        it = mGates.erase(it);
-      } else {
-        it++;
+      vector<int> gates;
+      for(int i = aig.nPis + 1; i < aig.nObjs; i++) {
+        gates.push_back(i);
+      }
+      mGates[inputs] = gates;
+    } else {
+      for(auto it = mGates.begin(); it != mGates.end();) {
+        bool fIncluded = false;
+        for(auto it2 = mGates.begin(); it2 != mGates.end(); it2++){
+          if(it == it2) {
+            continue;
+          }
+          if(includes(it2->second.begin(), it2->second.end(), it->second.begin(), it->second.end())) {
+            fIncluded = true;
+            break;
+          }
+        }
+        if(fIncluded) {
+          it = mGates.erase(it);
+        } else {
+          it++;
+        }
       }
     }
     // for each large cut
