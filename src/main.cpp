@@ -249,26 +249,31 @@ int main(int argc, char **argv) {
         cout << "\t\tInputs : " << inputs2 << endl;
         cout << "\t\tGates : " <<  gates2 << endl;
         cout << "\t\tOutputs : " <<  outputs2 << endl;
-        vector<int> gates_(nGates);
-        gates_.resize(set_difference(gates.begin(), gates.end(), gates2.begin(), gates2.end(), gates_.begin()) - gates_.begin());
-        cout << "\t\tOutside gates : " << gates_ << endl;
-        for(auto it = gates_.begin(); it != gates_.end();) {
+        vector<int> orig(inputs2.size() + gates2.size());
+        orig.resize(set_union(inputs2.begin(), inputs2.end(), gates2.begin(), gates2.end(), orig.begin()) - orig.begin());
+        vector<int> extra(nGates);
+        extra.resize(set_difference(gates.begin(), gates.end(), orig.begin(), orig.end(), extra.begin()) - extra.begin());
+        cout << "\t\tOutside gates : " << extra << endl;
+        for(auto it = extra.begin(); it != extra.end();) {
           if(aig.reach(outputs2, vector<int>{*it})) {
-            it = gates_.erase(it);
+            it = extra.erase(it);
             continue;
           }
           it++;
         }
-        cout << "\t\tExtra inputs : " << gates_ << endl;
+        cout << "\t\tExtra inputs : " << extra << endl;
+        if(extra.empty()) {
+          continue;
+        }
         vector<vector<bool> > br;
         GetBooleanRelation(aig, inputs, outputs2, br);
         //PrintVecWithIndex(br, "\t\t");
         vector<vector<bool> > sim;
-        GetSim(aig, inputs, gates_, sim);
+        GetSim(aig, inputs, extra, sim);
         //PrintVecWithIndex(sim, "\t\t");
         ExMan<KissatSolver> exman(br, &sim);
-        gates_.insert(gates_.begin(), inputs.begin(), inputs.end());
-        fSynthesized = Synthesize(aig, exman, nGates2, gates_, outputs2, "\t\t");
+        extra.insert(extra.begin(), inputs.begin(), inputs.end());
+        fSynthesized = Synthesize(aig, exman, nGates2, extra, outputs2, "\t\t");
         if(fSynthesized) {
           break;
         }
