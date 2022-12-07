@@ -79,6 +79,27 @@ bool Synthesize(aigman &aig, ExMan<KissatSolver> &exman, int nGates, vector<int>
   return false;
 }
 
+template <typename T>
+void RemoveIncluded(T &s) {
+  for(auto it = s.begin(); it != s.end();) {
+    bool fIncluded = false;
+    for(auto it2 = s.begin(); it2 != s.end(); it2++){
+      if(it == it2) {
+        continue;
+      }
+      if(includes(get<1>(*it2).begin(), get<1>(*it2).end(), get<1>(*it).begin(), get<1>(*it).end())) {
+        fIncluded = true;
+        break;
+      }
+    }
+    if(fIncluded) {
+      it = s.erase(it);
+    } else {
+      it++;
+    }
+  }
+}
+
 int main(int argc, char **argv) {
   argparse::ArgumentParser ap("exopt");
   ap.add_argument("input");
@@ -159,7 +180,9 @@ int main(int argc, char **argv) {
       it = mGates.erase(it);
     }
     // for each window
-    for(auto const &p: vWindows) {
+    auto vWindows2 = vWindows;
+    RemoveIncluded(vWindows2);
+    for(auto const &p: vWindows2) {
       auto const &inputs = get<0>(p);
       auto const &gates = get<1>(p);
       auto const &outputs = get<2>(p);
@@ -195,23 +218,7 @@ int main(int argc, char **argv) {
       }
       mGates[inputs] = gates;
     } else {
-      for(auto it = mGates.begin(); it != mGates.end();) {
-        bool fIncluded = false;
-        for(auto it2 = mGates.begin(); it2 != mGates.end(); it2++){
-          if(it == it2) {
-            continue;
-          }
-          if(includes(it2->second.begin(), it2->second.end(), it->second.begin(), it->second.end())) {
-            fIncluded = true;
-            break;
-          }
-        }
-        if(fIncluded) {
-          it = mGates.erase(it);
-        } else {
-          it++;
-        }
-      }
+      RemoveIncluded(mGates);
     }
     // for each large cut
     for(auto const &p: mGates) {
@@ -221,21 +228,27 @@ int main(int argc, char **argv) {
       cout << "Inputs : " << inputs << endl;
       cout << "Gates : " << gates << endl;
       // for each window
+      vWindows2.clear();
       for(auto const&q: vWindows) {
+        auto const &gates2 = get<1>(q);
+        auto const &outputs2 = get<2>(q);
+        if(!includes(gates.begin(), gates.end(), gates2.begin(), gates2.end())) {
+          continue;
+        }
+        if(aig.reach(outputs2, inputs)) {
+          continue;
+        }
+        vWindows2.push_back(q);
+      }
+      RemoveIncluded(vWindows2);
+      for(auto const&q: vWindows2) {
         auto const &inputs2 = get<0>(q);
         auto const &gates2 = get<1>(q);
         auto const &outputs2 = get<2>(q);
         int nGates2 = gates2.size();
-        if(!includes(gates.begin(), gates.end(), gates2.begin(), gates2.end())) {
-          continue;
-        }
         cout << "\t\tInputs : " << inputs2 << endl;
         cout << "\t\tGates : " <<  gates2 << endl;
         cout << "\t\tOutputs : " <<  outputs2 << endl;
-        if(aig.reach(outputs2, inputs)) {
-          cout << "\t\t* Skipped due to potential loops" << endl;
-          continue;
-        }
         vector<int> gates_(nGates);
         gates_.resize(set_difference(gates.begin(), gates.end(), gates2.begin(), gates2.end(), gates_.begin()) - gates_.begin());
         cout << "\t\tOutside gates : " << gates_ << endl;
