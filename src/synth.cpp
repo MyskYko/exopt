@@ -1,4 +1,5 @@
 #include <cassert>
+#include <algorithm>
 
 #include "util.hpp"
 #include "synth.hpp"
@@ -445,7 +446,6 @@ aigman *ExMan<T>::EnumSynth(int nGates_) {
   vector<vector<int> > all;
   vector<int> tmp(nGates * 2 + 2);
   Enumerate(tmp, 1, all);
-  int c = 0;
   for(auto const &v: all) {
     S = new T;
     GenSels(v);
@@ -503,6 +503,114 @@ aigman *ExMan<T>::ExEnumSynth(int nGates_) {
   aigman *aig = NULL;
   while(--nGates_ >= 0) {
     aigman *aig2 = EnumSynth(nGates_);
+    if(!aig2) {
+      break;
+    }
+    if(aig) {
+      delete aig;
+    }
+    aig = aig2;
+  }
+  return aig;
+}
+
+template <class T>
+aigman *ExMan<T>::EnumSynth2(int nGates_) {
+  nGates = nGates_;
+  S = new T;
+  GenSels();
+  SortSels();
+  for(int i = 0; i < (int)br.size(); i++) {
+    bool fDc = true;
+    for(int j = 0; j < (int)br[i].size(); j++) {
+      if(!br[i][j]) {
+        fDc = false;
+        break;
+      }
+    }
+    if(fDc) {
+      continue;
+    }
+    vector<int> pis(nInputs);
+    for(int k = 0; k < nInputs; k++) {
+      pis[k] = (i >> k) & 1? S->one: S->zero;
+    }
+    vector<int> exins(nExtraInputs);
+    for(int k = 0; k < nExtraInputs; k++) {
+      exins[k] = (*sim)[i][k]? S->one: S->zero;
+    }
+    vector<int> pos(nOutputs);
+    for(int k = 0; k < nOutputs; k++) {
+      pos[k] = S->NewVar();
+    }
+    vector<int> tmps;
+    for(int j = 0; j < (int)br[i].size(); j++) {
+      if(br[i][j]) {
+        vector<int> vLits(nOutputs);
+        for(int k = 0; k < nOutputs; k++) {
+          vLits[k] = (j >> k) & 1? pos[k]: -pos[k];
+        }
+        tmps.push_back(S->AndN(vLits));
+      }
+    }
+    S->AddClause(tmps);
+    pis.insert(pis.end(), exins.begin(), exins.end());
+    GenOne(pis, pos);
+  }
+  vector<vector<int> > all;
+  vector<int> tmp(nGates * 2 + 2);
+  Enumerate(tmp, 1, all);
+  vector<set<int> > cores;
+  for(auto const &v: all) {
+    vector<int> assumption;
+    for(int i = 0; i < nGates; i++) {
+      for(int k = 0; k < 2; k++) {
+        if(v[i+i+k]) {
+          int j2 = nInputs + nExtraInputs + v[i+i+k] + k - 2;
+          assumption.push_back(sels[i + i + k][j2]);
+          for(int j = 0; j < nInputs + nExtraInputs + i - 1; j++) {
+            if(j != j2) {
+              assumption.push_back(-sels[i + i + k][j]);
+            }
+          }
+        } else {
+          for(int j = nInputs + nExtraInputs + k - 1; j < nInputs + nExtraInputs + i - 1; j++) {
+            assumption.push_back(-sels[i + i + k][j]);
+          }
+        }
+      }
+    }
+    set<int> assumption_set(assumption.begin(), assumption.end());
+    bool fIncluded = false;
+    for(auto const &core: cores) {
+      if(includes(assumption_set.begin(), assumption_set.end(), core.begin(), core.end())) {
+        fIncluded = true;
+      }
+    }
+    if(fIncluded) {
+      continue;
+    }
+    set<int> core;
+    int res = S->Solve(assumption, core);
+    if(res == 1) {
+      aigman *aig = GetAig();
+      delete S;
+      return aig;
+    }
+    if(res == -1) {
+      cores.push_back(core);
+    }
+  }
+  delete S;
+  return NULL;
+}
+
+template <class T>
+aigman *ExMan<T>::ExEnumSynth2(int nGates_) {
+  assert(nGates_>= 0);
+  aigman *aig = NULL;
+  while(--nGates_ >= 0) {
+    aigman *aig2 = EnumSynth2(nGates_);
     if(!aig2) {
       break;
     }
