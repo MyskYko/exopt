@@ -47,9 +47,18 @@ bool Synthesize(aigman &aig, ExMan<KissatSolver> &exman, int nGates, vector<int>
   aig2 = exman.Synth(nGates);
   assert(aig2);
   delete aig2;
+
+  aig2 = exman.EnumSynth(nGates);
+  assert(aig2);
+  delete aig2;
   */
   if((aig2 = exman.ExSynth(nGates))) {
     cout << prefix << "Synthesized with " << aig2->nGates << " gates" << endl;
+    /*
+    aigman *aig3 = exman.ExEnumSynth(nGates);
+    assert(aig2->nGates == aig3->nGates);
+    delete aig3;
+    */
     vector<int> outputs_shift;
     for(int i: outputs) {
       outputs_shift.push_back(i << 1);
@@ -76,6 +85,9 @@ bool Synthesize(aigman &aig, ExMan<KissatSolver> &exman, int nGates, vector<int>
     return true;
   }
   cout << prefix << "* Synthesis failed" << endl;
+  /*
+  assert(!exman.ExEnumSynth(nGates));
+  */
   return false;
 }
 
