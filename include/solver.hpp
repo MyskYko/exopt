@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <set>
 
 class Solver {
 private:
@@ -46,6 +47,7 @@ public:
   virtual ~Solver() {}
 
   virtual int Solve() = 0;
+  virtual int Solve(std::vector<int> const &assumption, std::set<int> &core) = 0;
 
   inline int NewVar();
 

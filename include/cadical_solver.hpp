@@ -1,26 +1,22 @@
 #pragma once
 
-#include <cstdlib>
-
-extern "C" {
-  #include <kissat.h>
-}
+#include <cadical.hpp>
 
 #include "solver.hpp"
 
-class KissatSolver: public Solver {
+class CadicalSolver: public Solver {
 private:
-  kissat *S;
+  CaDiCaL::Solver *S;
 
   void AddClause_(std::vector<int> const &vLits) {
     for(int i = 0; i < (int)vLits.size(); i++) {
-      kissat_add(S, vLits[i]);
+      S->add(vLits[i]);
     }
-    kissat_add(S, 0);
+    S->add(0);
   }
 
   bool Value_(int i) {
-    return kissat_value(S, i) > 0;
+    return S->val(i) > 0;
   }
 
   void AMO_(std::vector<int> const &vLits) {
@@ -34,19 +30,26 @@ private:
   }
 
 public:
-  KissatSolver(): S(kissat_init()) {}
-  ~KissatSolver() {
-    kissat_release(S);
+  CadicalSolver(): S(new CaDiCaL::Solver) {}
+  ~CadicalSolver() {
+    delete S;
   }
 
   int Solve() {
-    int res = kissat_solve(S);
+    int res = S->solve();
     return res == 10? 1: res == 20? -1: 0;
   }
 
   int Solve(std::vector<int> const &assumption, std::set<int> &core) {
-    (void)assumption;
-    (void)core;
-    std::abort();
+    for(int i: assumption) {
+      S->assume(i);
+    }
+    int res = S->solve();
+    for(int i: assumption) {
+      if(S->failed(i)) {
+        core.insert(i);
+      }
+    }
+    return res == 10? 1: res == 20? -1: 0;
   }
 };
