@@ -7,3 +7,6 @@
 [submodule "lib/argparse"]
 	path = lib/argparse
 	url = https://github.com/p-ranav/argparse.git
+[submodule "lib/cadical"]
+	path = lib/cadical
+	url = https://github.com/MyskYko/cadical.git
