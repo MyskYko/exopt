@@ -249,10 +249,8 @@ int main(int argc, char **argv) {
         cout << "\t\tInputs : " << inputs2 << endl;
         cout << "\t\tGates : " <<  gates2 << endl;
         cout << "\t\tOutputs : " <<  outputs2 << endl;
-        vector<int> orig(inputs2.size() + gates2.size());
-        orig.resize(set_union(inputs2.begin(), inputs2.end(), gates2.begin(), gates2.end(), orig.begin()) - orig.begin());
         vector<int> extra(nGates);
-        extra.resize(set_difference(gates.begin(), gates.end(), orig.begin(), orig.end(), extra.begin()) - extra.begin());
+        extra.resize(set_difference(gates.begin(), gates.end(), gates2.begin(), gates2.end(), extra.begin()) - extra.begin());
         cout << "\t\tOutside gates : " << extra << endl;
         for(auto it = extra.begin(); it != extra.end();) {
           if(aig.reach(outputs2, vector<int>{*it})) {
@@ -262,9 +260,6 @@ int main(int argc, char **argv) {
           it++;
         }
         cout << "\t\tExtra inputs : " << extra << endl;
-        if(extra.empty()) {
-          continue;
-        }
         vector<vector<bool> > br;
         GetBooleanRelation(aig, inputs, outputs2, br);
         //PrintVecWithIndex(br, "\t\t");
