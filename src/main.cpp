@@ -96,6 +96,7 @@ int main(int argc, char **argv) {
   ap.add_argument("output");
   ap.add_argument("-k", "--cutsize").default_value(8).scan<'i', int>();
   ap.add_argument("-n", "--windowsize").default_value(6).scan<'i', int>();
+  ap.add_argument("-a", "--alldivisors").default_value(false).implicit_value(true);
   try {
     ap.parse_args(argc, argv);
   }
@@ -108,8 +109,8 @@ int main(int argc, char **argv) {
   string outname = ap.get<string>("output");
   int cutsize = ap.get<int>("--cutsize");
   int windowsize = ap.get<int>("--windowsize");
+  bool fAllDivisors = ap.get<bool>("--alldivisors");
   aigman aig(aigname);
-  bool fAllDivisors = false; //aig.nPis < 10;
   aig.supportfanouts();
   bool fSynthesized = true;
   while(fSynthesized) {
