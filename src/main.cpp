@@ -90,6 +90,34 @@ void RemoveIncluded(T &s) {
   }
 }
 
+template <typename T>
+void RemoveIncluded(T &s, aigman &aig) {
+  for(auto it = s.begin(); it != s.end();) {
+    bool fIncluded = false;
+    for(auto it2 = s.begin(); it2 != s.end(); it2++){
+      if(it == it2) {
+        continue;
+      }
+      if(includes(get<1>(*it2).begin(), get<1>(*it2).end(), get<1>(*it).begin(), get<1>(*it).end())) {
+        fIncluded = true;
+        for(int i: get<2>(*it2)) {
+          std::vector<int> v{i};
+          if(!aig.reach(get<2>(*it), v)) {
+            fIncluded = false;
+            break;
+          }
+        }
+        break;
+      }
+    }
+    if(fIncluded) {
+      it = s.erase(it);
+    } else {
+      it++;
+    }
+  }
+}
+
 int main(int argc, char **argv) {
   argparse::ArgumentParser ap("exopt");
   ap.add_argument("input");
@@ -231,7 +259,7 @@ int main(int argc, char **argv) {
         }
         vWindows2.push_back(q);
       }
-      RemoveIncluded(vWindows2);
+      RemoveIncluded(vWindows2, aig);
       for(auto const&q: vWindows2) {
         auto const &inputs2 = get<0>(q);
         auto const &gates2 = get<1>(q);
