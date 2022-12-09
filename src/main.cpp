@@ -43,22 +43,8 @@ void PrintVecWithIndex(vector<T> const &v, string prefix = "") {
 bool Synthesize(aigman &aig, ExMan<KissatSolver> &exman, int nGates, vector<int> const & inputs, vector<int> const & outputs, string prefix = "") {
   cout << prefix << "Synthesizing with less than " << nGates << " gates" << endl;
   aigman *aig2;
-  /*
-  aig2 = exman.Synth(nGates);
-  assert(aig2);
-  delete aig2;
-
-  aig2 = exman.EnumSynth(nGates);
-  assert(aig2);
-  delete aig2;
-  */
   if((aig2 = exman.ExSynth(nGates))) {
     cout << prefix << "Synthesized with " << aig2->nGates << " gates" << endl;
-    /*
-    aigman *aig3 = exman.ExEnumSynth(nGates);
-    assert(aig2->nGates == aig3->nGates);
-    delete aig3;
-    */
     vector<int> outputs_shift;
     for(int i: outputs) {
       outputs_shift.push_back(i << 1);
@@ -74,20 +60,12 @@ bool Synthesize(aigman &aig, ExMan<KissatSolver> &exman, int nGates, vector<int>
       }
     }
     cout << endl;
-    /*
-    aig.write("y.aig");
-    string cmd = "abc -q \"read y.aig; print_stats; cec " + aigname + "\"";
-    int r = system(cmd.c_str());
-    */
     assert(nGatesAll - aig.nGates >= nGates - aig2->nGates);
     delete aig2;
     aig.renumber();
     return true;
   }
   cout << prefix << "* Synthesis failed" << endl;
-  /*
-  assert(!exman.ExEnumSynth(nGates));
-  */
   return false;
 }
 
