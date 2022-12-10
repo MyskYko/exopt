@@ -5,6 +5,7 @@
 #include <fstream>
 #include <bitset>
 #include <algorithm>
+#include <random>
 
 #include <cassert>
 
@@ -40,32 +41,40 @@ void PrintVecWithIndex(vector<T> const &v, string prefix = "") {
   }
 }
 
-bool Synthesize(aigman &aig, ExMan<KissatSolver> &exman, int nGates, vector<int> const & inputs, vector<int> const & outputs, string prefix = "") {
-  cout << prefix << "Synthesizing with less than " << nGates << " gates" << endl;
+bool Synthesize(aigman &aig, ExMan<KissatSolver> &exman, int nGates, vector<int> const & inputs, vector<int> const & outputs, bool fVerbose, string prefix = "") {
+  if(fVerbose) {
+    cout << prefix << "Synthesizing with less than " << nGates << " gates" << endl;
+  }
   aigman *aig2;
   if((aig2 = exman.ExSynth(nGates))) {
-    cout << prefix << "Synthesized with " << aig2->nGates << " gates" << endl;
+    if(fVerbose) {
+      cout << prefix << "Synthesized with " << aig2->nGates << " gates" << endl;
+    }
     vector<int> outputs_shift;
     for(int i: outputs) {
       outputs_shift.push_back(i << 1);
     }
     int nGatesAll = aig.nGates;
     aig.import(aig2, inputs, outputs_shift);
-    cout << prefix << "Replaced gates : ";
-    string delim;
-    for(int i = 0; i < aig.nObjs; i++) {
-      if(aig.vDeads[i]) {
-        cout << delim << i;
-        delim = ", ";
+    if(fVerbose) {
+      cout << prefix << "Replaced gates : ";
+      string delim;
+      for(int i = 0; i < aig.nObjs; i++) {
+        if(aig.vDeads[i]) {
+          cout << delim << i;
+          delim = ", ";
+        }
       }
+      cout << endl;
     }
-    cout << endl;
     assert(nGatesAll - aig.nGates >= nGates - aig2->nGates);
     delete aig2;
     aig.renumber();
     return true;
   }
-  cout << prefix << "* Synthesis failed" << endl;
+  if(fVerbose) {
+    cout << prefix << "* Synthesis failed" << endl;
+  }
   return false;
 }
 
@@ -101,7 +110,7 @@ void RemoveIncluded(T &s, aigman &aig) {
       if(includes(get<1>(*it2).begin(), get<1>(*it2).end(), get<1>(*it).begin(), get<1>(*it).end())) {
         fIncluded = true;
         for(int i: get<2>(*it2)) {
-          std::vector<int> v{i};
+          vector<int> v{i};
           if(!aig.reach(get<2>(*it), v)) {
             fIncluded = false;
             break;
@@ -118,6 +127,31 @@ void RemoveIncluded(T &s, aigman &aig) {
   }
 }
 
+bool Run(aigman &aig, vector<tuple<vector<int>, vector<int>, vector<int> > > vWindows, bool fVerbose) {
+  RemoveIncluded(vWindows);
+  for(auto const &p: vWindows) {
+    auto const &inputs = get<0>(p);
+    auto const &gates = get<1>(p);
+    auto const &outputs = get<2>(p);
+    int nGates = gates.size();
+    if(fVerbose) {
+      cout << "Inputs : " << inputs << endl;
+      cout << "Gates : " << gates << endl;
+      cout << "Outputs : " << outputs << endl;
+    }
+    // get relation
+    vector<vector<bool> > br;
+    GetBooleanRelation(aig, inputs, outputs, br);
+    //PrintVecWithIndex(br);
+    // synthesis
+    ExMan<KissatSolver> exman(br);
+    if(Synthesize(aig, exman, nGates, inputs, outputs, fVerbose)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 int main(int argc, char **argv) {
   argparse::ArgumentParser ap("exopt");
   ap.add_argument("input");
@@ -125,6 +159,8 @@ int main(int argc, char **argv) {
   ap.add_argument("-k", "--cutsize").default_value(8).scan<'i', int>();
   ap.add_argument("-n", "--windowsize").default_value(6).scan<'i', int>();
   ap.add_argument("-a", "--alldivisors").default_value(false).implicit_value(true);
+  ap.add_argument("-r", "--numrounds").default_value(10).scan<'i', int>();
+  ap.add_argument("-v", "--verbose").default_value(false).implicit_value(true);
   try {
     ap.parse_args(argc, argv);
   }
@@ -138,8 +174,14 @@ int main(int argc, char **argv) {
   int cutsize = ap.get<int>("--cutsize");
   int windowsize = ap.get<int>("--windowsize");
   bool fAllDivisors = ap.get<bool>("--alldivisors");
-  aigman aig(aigname);
-  aig.supportfanouts();
+  int numrounds = ap.get<int>("--numrounds");
+  bool fVerbose = ap.get<bool>("--verbose");
+  mt19937 rg;
+  aigman aig_orig(aigname);
+  aig_orig.supportfanouts();
+  aigman aigout = aig_orig;
+  for(int round = 0; round < numrounds; round++) {
+  aigman aig = aig_orig;
   bool fSynthesized = true;
   while(fSynthesized) {
     fSynthesized = false;
@@ -198,29 +240,11 @@ int main(int argc, char **argv) {
       vWindows.push_back(make_tuple(it->first, it->second, outputs));
       it = mGates.erase(it);
     }
-    // for each window
-    auto vWindows2 = vWindows;
-    RemoveIncluded(vWindows2);
-    for(auto const &p: vWindows2) {
-      auto const &inputs = get<0>(p);
-      auto const &gates = get<1>(p);
-      auto const &outputs = get<2>(p);
-      int nGates = gates.size();
-      cout << "Inputs : " << inputs << endl;
-      cout << "Gates : " << gates << endl;
-      cout << "Outputs : " << outputs << endl;
-      // get relation
-      vector<vector<bool> > br;
-      GetBooleanRelation(aig, inputs, outputs, br);
-      //PrintVecWithIndex(br);
-      // synthesis
-      ExMan<KissatSolver> exman(br);
-      fSynthesized = Synthesize(aig, exman, nGates, inputs, outputs);
-      if(fSynthesized) {
-        break;
-      }
-      continue;
+    if(round) {
+      shuffle(vWindows.begin(), vWindows.end(), rg);
     }
+    // for each window
+    fSynthesized = Run(aig, vWindows, fVerbose);
     if(fSynthesized) {
       continue;
     }
@@ -239,15 +263,21 @@ int main(int argc, char **argv) {
     } else {
       RemoveIncluded(mGates);
     }
+    vector<pair<vector<int>, vector<int> > > vGates(mGates.begin(), mGates.end());
+    if(round) {
+      shuffle(vGates.begin(), vGates.end(), rg);
+    }
     // for each large cut
-    for(auto const &p: mGates) {
+    for(auto const &p: vGates) {
       auto const &inputs = get<0>(p);
       auto const &gates = get<1>(p);
       int nGates = gates.size();
-      cout << "Inputs : " << inputs << endl;
-      cout << "Gates : " << gates << endl;
+      if(fVerbose) {
+        cout << "Inputs : " << inputs << endl;
+        cout << "Gates : " << gates << endl;
+      }
       // for each window
-      vWindows2.clear();
+      vector<tuple<vector<int>, vector<int>, vector<int> > > vWindows2;
       for(auto const&q: vWindows) {
         auto const &gates2 = get<1>(q);
         auto const &outputs2 = get<2>(q);
@@ -265,12 +295,16 @@ int main(int argc, char **argv) {
         auto const &gates2 = get<1>(q);
         auto const &outputs2 = get<2>(q);
         int nGates2 = gates2.size();
-        cout << "\t\tInputs : " << inputs2 << endl;
-        cout << "\t\tGates : " <<  gates2 << endl;
-        cout << "\t\tOutputs : " <<  outputs2 << endl;
+        if(fVerbose) {
+          cout << "\t\tInputs : " << inputs2 << endl;
+          cout << "\t\tGates : " <<  gates2 << endl;
+          cout << "\t\tOutputs : " <<  outputs2 << endl;
+        }
         vector<int> extra(nGates);
         extra.resize(set_difference(gates.begin(), gates.end(), gates2.begin(), gates2.end(), extra.begin()) - extra.begin());
-        cout << "\t\tOutside gates : " << extra << endl;
+        if(fVerbose) {
+          cout << "\t\tOutside gates : " << extra << endl;
+        }
         for(auto it = extra.begin(); it != extra.end();) {
           if(aig.reach(outputs2, vector<int>{*it})) {
             it = extra.erase(it);
@@ -278,7 +312,9 @@ int main(int argc, char **argv) {
           }
           it++;
         }
-        cout << "\t\tExtra inputs : " << extra << endl;
+        if(fVerbose) {
+          cout << "\t\tExtra inputs : " << extra << endl;
+        }
         vector<vector<bool> > br;
         GetBooleanRelation(aig, inputs, outputs2, br);
         //PrintVecWithIndex(br, "\t\t");
@@ -287,7 +323,7 @@ int main(int argc, char **argv) {
         //PrintVecWithIndex(sim, "\t\t");
         ExMan<KissatSolver> exman(br, &sim);
         extra.insert(extra.begin(), inputs.begin(), inputs.end());
-        fSynthesized = Synthesize(aig, exman, nGates2, extra, outputs2, "\t\t");
+        fSynthesized = Synthesize(aig, exman, nGates2, extra, outputs2, fVerbose, "\t\t");
         if(fSynthesized) {
           break;
         }
@@ -298,6 +334,10 @@ int main(int argc, char **argv) {
     }
   }
   cout << aig.nGates << endl;
-  aig.write(outname);
+  if(aig.nGates < aigout.nGates) {
+    aigout = aig;
+  }
+  }
+  aigout.write(outname);
   return 0;
 }
