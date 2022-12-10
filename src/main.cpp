@@ -41,7 +41,7 @@ void PrintVecWithIndex(vector<T> const &v, string prefix = "") {
   }
 }
 
-bool Synthesize(aigman &aig, ExMan<KissatSolver> &exman, int nGates, vector<int> const & inputs, vector<int> const & outputs, bool fVerbose, string prefix = "") {
+bool Synthesize(aigman &aig, SynthMan<KissatSolver> &exman, int nGates, vector<int> const & inputs, vector<int> const & outputs, bool fVerbose, string prefix = "") {
   if(fVerbose) {
     cout << prefix << "Synthesizing with less than " << nGates << " gates" << endl;
   }
@@ -144,7 +144,7 @@ bool Run(aigman &aig, vector<tuple<vector<int>, vector<int>, vector<int> > > vWi
     GetBooleanRelation(aig, inputs, outputs, br);
     //PrintVecWithIndex(br);
     // synthesis
-    ExMan<KissatSolver> exman(br);
+    SynthMan<KissatSolver> exman(br);
     if(Synthesize(aig, exman, nGates, inputs, outputs, fVerbose)) {
       return true;
     }
@@ -321,7 +321,7 @@ int main(int argc, char **argv) {
         vector<vector<bool> > sim;
         GetSim(aig, inputs, extra, sim);
         //PrintVecWithIndex(sim, "\t\t");
-        ExMan<KissatSolver> exman(br, &sim);
+        SynthMan<KissatSolver> exman(br, &sim);
         extra.insert(extra.begin(), inputs.begin(), inputs.end());
         fSynthesized = Synthesize(aig, exman, nGates2, extra, outputs2, fVerbose, "\t\t");
         if(fSynthesized) {

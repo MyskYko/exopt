@@ -7,7 +7,7 @@
 using namespace std;
 
 template <class T>
-ExMan<T>::ExMan(vector<vector<bool> > const &br, vector<vector<bool> > const *sim): br(br), sim(sim) {
+SynthMan<T>::SynthMan(vector<vector<bool> > const &br, vector<vector<bool> > const *sim): br(br), sim(sim) {
   nInputs = clog2(br.size());
   nOutputs = clog2(br[0].size());
   if(sim) {
@@ -19,7 +19,7 @@ ExMan<T>::ExMan(vector<vector<bool> > const &br, vector<vector<bool> > const *si
 }
 
 template <class T>
-void ExMan<T>::GenSels() {
+void SynthMan<T>::GenSels() {
   negs.clear();
   negs.resize(nGates * 2);
   sels.clear();
@@ -47,7 +47,7 @@ void ExMan<T>::GenSels() {
 }
 
 template <class T>
-void ExMan<T>::SortSels() {
+void SynthMan<T>::SortSels() {
   for(int i = 0; i < nGates; i++) {
     for(int j = 0; j < nInputs + nExtraInputs + i - 2; j++) {
       vector<int> vLits(j + 2);
@@ -103,7 +103,7 @@ void ExMan<T>::SortSels() {
 }
 
 template <class T>
-void ExMan<T>::GenOne(vector<int> cands, vector<int> const &pos) {
+void SynthMan<T>::GenOne(vector<int> cands, vector<int> const &pos) {
   cands.resize(nInputs + nExtraInputs + nGates);
   for(int i = 0; i < nGates; i++) {
     vector<int> fis(2);
@@ -128,7 +128,7 @@ void ExMan<T>::GenOne(vector<int> cands, vector<int> const &pos) {
 }
 
 template <class T>
-aigman *ExMan<T>::GetAig() {
+aigman *SynthMan<T>::GetAig() {
   aigman *aig = new aigman(nInputs + nExtraInputs, 0);
   vector<int> cands(nInputs + nExtraInputs + nGates);
   for(int i = 0; i < nInputs + nExtraInputs; i++) {
@@ -165,7 +165,7 @@ aigman *ExMan<T>::GetAig() {
 }
 
 template <class T>
-aigman *ExMan<T>::Synth(int nGates_) {
+aigman *SynthMan<T>::Synth(int nGates_) {
   nGates = nGates_;
   S = new T;
   GenSels();
@@ -216,7 +216,7 @@ aigman *ExMan<T>::Synth(int nGates_) {
 }
 
 template <class T>
-aigman *ExMan<T>::ExSynth(int nGates_) {
+aigman *SynthMan<T>::ExSynth(int nGates_) {
   assert(nGates_>= 0);
   aigman *aig = NULL;
   while(--nGates_ >= 0) {
@@ -260,7 +260,7 @@ void Enumerate(vector<int> &v, int i, vector<vector<int> > &all) {
 }
 
 template <class T>
-void ExMan<T>::GenSels(vector<int> const &assignment) {
+void SynthMan<T>::GenSels(vector<int> const &assignment) {
   negs.clear();
   negs.resize(nGates * 2);
   sels.clear();
@@ -290,7 +290,7 @@ void ExMan<T>::GenSels(vector<int> const &assignment) {
 }
 
 template <class T>
-void ExMan<T>::SortSels(vector<int> const &assignment) {
+void SynthMan<T>::SortSels(vector<int> const &assignment) {
   for(int i = 0; i < nGates; i++) {
     if(!assignment[i+i] && !assignment[i+i+1]) {
       S->AddClause(-sels[i+i+1][nInputs + nExtraInputs - 1]);
@@ -368,7 +368,7 @@ void ExMan<T>::SortSels(vector<int> const &assignment) {
 }
 
 template <class T>
-void ExMan<T>::GenOne(vector<int> cands, vector<int> const &pos, vector<int> const&assignment) {
+void SynthMan<T>::GenOne(vector<int> cands, vector<int> const &pos, vector<int> const&assignment) {
   cands.resize(nInputs + nExtraInputs + nGates);
   for(int i = 0; i < nGates; i++) {
     vector<int> fis(2);
@@ -398,7 +398,7 @@ void ExMan<T>::GenOne(vector<int> cands, vector<int> const &pos, vector<int> con
 }
 
 template <class T>
-aigman *ExMan<T>::GetAig(vector<int> const &assignment) {
+aigman *SynthMan<T>::GetAig(vector<int> const &assignment) {
   aigman *aig = new aigman(nInputs + nExtraInputs, 0);
   vector<int> cands(nInputs + nExtraInputs + nGates);
   for(int i = 0; i < nInputs + nExtraInputs; i++) {
@@ -441,7 +441,7 @@ aigman *ExMan<T>::GetAig(vector<int> const &assignment) {
 }
 
 template <class T>
-aigman *ExMan<T>::EnumSynth(int nGates_) {
+aigman *SynthMan<T>::EnumSynth(int nGates_) {
   nGates = nGates_;
   vector<vector<int> > all;
   vector<int> tmp(nGates * 2 + 2);
@@ -498,7 +498,7 @@ aigman *ExMan<T>::EnumSynth(int nGates_) {
 }
 
 template <class T>
-aigman *ExMan<T>::ExEnumSynth(int nGates_) {
+aigman *SynthMan<T>::ExEnumSynth(int nGates_) {
   assert(nGates_>= 0);
   aigman *aig = NULL;
   while(--nGates_ >= 0) {
@@ -515,7 +515,7 @@ aigman *ExMan<T>::ExEnumSynth(int nGates_) {
 }
 
 template <class T>
-aigman *ExMan<T>::EnumSynth2(int nGates_) {
+aigman *SynthMan<T>::EnumSynth2(int nGates_) {
   nGates = nGates_;
   S = new T;
   GenSels();
@@ -606,7 +606,7 @@ aigman *ExMan<T>::EnumSynth2(int nGates_) {
 }
 
 template <class T>
-aigman *ExMan<T>::ExEnumSynth2(int nGates_) {
+aigman *SynthMan<T>::ExEnumSynth2(int nGates_) {
   assert(nGates_>= 0);
   aigman *aig = NULL;
   while(--nGates_ >= 0) {

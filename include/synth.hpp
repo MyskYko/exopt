@@ -6,7 +6,7 @@
 #include "cadical_solver.hpp"
 
 template <class T>
-class ExMan {
+class SynthMan {
 private:
   T *S;
   std::vector<std::vector<bool> > const &br;
@@ -32,7 +32,7 @@ private:
   aigman *GetAig(std::vector<int> const &assignment);
 
 public:
-  ExMan(std::vector<std::vector<bool> > const &br, std::vector<std::vector<bool> > const *sim = NULL);
+  SynthMan(std::vector<std::vector<bool> > const &br, std::vector<std::vector<bool> > const *sim = NULL);
 
   aigman *Synth(int nGates_);
   aigman *ExSynth(int nGates_);
@@ -44,5 +44,5 @@ public:
   aigman *ExEnumSynth2(int nGates_);
 };
 
-template class ExMan<KissatSolver>;
-template class ExMan<CadicalSolver>;
+template class SynthMan<KissatSolver>;
+template class SynthMan<CadicalSolver>;
