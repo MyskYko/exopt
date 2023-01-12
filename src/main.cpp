@@ -1,8 +1,7 @@
 #include <argparse/argparse.hpp>
 
-#include <aig.hpp>
-
 #include "opt.hpp"
+#include "rel.hpp"
 
 using namespace std;
 
@@ -15,6 +14,7 @@ int main(int argc, char **argv) {
   ap.add_argument("-a", "--alldivisors").default_value(false).implicit_value(true);
   ap.add_argument("-r", "--numrounds").default_value(10).scan<'i', int>();
   ap.add_argument("-v", "--verbose").default_value(false).implicit_value(true);
+  ap.add_argument("-g", "--numgates").scan<'i', int>();
   try {
     ap.parse_args(argc, argv);
   }
@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
     cerr << ap;
     return 1;
   }
-  string aigname = ap.get<string>("input");
+  string inname = ap.get<string>("input");
   string outname = ap.get<string>("output");
   int cutsize = ap.get<int>("--cutsize");
   int windowsize = ap.get<int>("--windowsize");
@@ -31,7 +31,24 @@ int main(int argc, char **argv) {
   int numrounds = ap.get<int>("--numrounds");
   bool fVerbose = ap.get<bool>("--verbose");
   mt19937 rg;
-  aigman aig_orig(aigname);
+  if(inname.substr(inname.find_last_of(".") + 1) == "rel") {
+    int nGates = ap.get<int>("--numgates");
+    vector<vector<bool> > br;
+    vector<vector<bool> > *sim = NULL;
+    ReadBooleanRelation(inname, br, sim, fVerbose);
+    SynthMan<KissatSolver> synthman(br, sim);
+    cout << "Synthesizing with at most " << nGates << " gates" << endl;
+    aigman *aig = synthman.ExSynth(nGates + 1);
+    if(aig) {
+      aig->write(outname);
+      cout << "Synthesized with " << aig->nGates << " gates" << endl;
+      delete aig;
+    } else {
+      cout << "* Synthesis failed" << endl;
+    }
+    return 0;
+  }
+  aigman aig_orig(inname);
   aig_orig.supportfanouts();
   aigman aigout = aig_orig;
   for(int round = 0; round < numrounds; round++) {
