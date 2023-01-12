@@ -16,10 +16,7 @@ std::ostream &operator<<(std::ostream &os, std::vector<T> const &v) {
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, Cut const &cut) {
-  os << "{" << cut.leaves << "}";
-  return os;
-}
+std::ostream &operator<<(std::ostream &os, Cut const &cut);
 
 template <typename T>
 void PrintVecWithIndex(std::vector<T> const &v, std::string prefix = "") {
