@@ -88,6 +88,11 @@ bool OptMan::Synthesize(SynthMan<KissatSolver> &synthman, int nGates, vector<int
     cout << prefix << "Synthesizing with less than " << nGates << " gates" << endl;
   }
   aigman *aig2;
+#ifdef DEBUG
+  aig2 = synthman.Synth(nGates);
+  assert(aig2);
+  delete aig2;
+#endif
   if((aig2 = synthman.ExSynth(nGates))) {
     if(fVerbose) {
       cout << prefix << "Synthesized with " << aig2->nGates << " gates" << endl;
