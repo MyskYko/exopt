@@ -60,11 +60,14 @@ int main(int argc, char **argv) {
       }
       break;
     }
-    cout << aig.nGates << endl;
+    if(aig.nGates == aig_orig.nGates) {
+      break;
+    }
     if(aig.nGates < aigout.nGates) {
       aigout = aig;
     }
   }
+  cout << aigout.nGates << endl;
   aigout.write(outname);
   return 0;
 }
