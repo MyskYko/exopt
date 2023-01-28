@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <cadical.hpp>
 
 #include "solver.hpp"
@@ -7,12 +8,14 @@
 class CadicalSolver: public Solver {
 private:
   CaDiCaL::Solver *S;
+  int nClauses;
 
   void AddClause_(std::vector<int> const &vLits) {
     for(int i = 0; i < (int)vLits.size(); i++) {
       S->add(vLits[i]);
     }
     S->add(0);
+    nClauses++;
   }
 
   bool Value_(int i) {
@@ -30,7 +33,7 @@ private:
   }
 
 public:
-  CadicalSolver(): S(new CaDiCaL::Solver) {}
+  CadicalSolver(): S(new CaDiCaL::Solver), nClauses(0) {}
   ~CadicalSolver() {
     delete S;
   }
@@ -51,5 +54,9 @@ public:
       }
     }
     return res == 10? 1: res == 20? -1: 0;
+  }
+
+  void PrintStat() {
+    std::cout << "nVars: " << nVars << " nClauses: " << nClauses << std::endl;
   }
 };

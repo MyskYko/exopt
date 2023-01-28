@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <cstdlib>
 
 extern "C" {
@@ -11,12 +12,14 @@ extern "C" {
 class KissatSolver: public Solver {
 private:
   kissat *S;
+  int nClauses;
 
   void AddClause_(std::vector<int> const &vLits) {
     for(int i = 0; i < (int)vLits.size(); i++) {
       kissat_add(S, vLits[i]);
     }
     kissat_add(S, 0);
+    nClauses++;
   }
 
   bool Value_(int i) {
@@ -35,7 +38,7 @@ private:
   }
 
 public:
-  KissatSolver(): S(kissat_init()) {}
+  KissatSolver(): S(kissat_init()), nClauses(0) {}
   ~KissatSolver() {
     kissat_release(S);
   }
@@ -49,5 +52,9 @@ public:
     (void)assumption;
     (void)core;
     std::abort();
+  }
+
+  void PrintStat() {
+    std::cout << "nVars: " << nVars << " nClauses: " << nClauses << std::endl;
   }
 };

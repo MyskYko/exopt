@@ -5,8 +5,6 @@
 
 class Solver {
 private:
-  int nVars;
-
   void Comparator(int a, int b, int c, int d);
   void PwSplit(std::vector<int> const &a, std::vector<int> &b, std::vector<int> &c);
   void PwMerge(std::vector<int> const &a, std::vector<int> const &b, std::vector<int> &c);
@@ -25,6 +23,7 @@ private:
   void DirectPairwiseMerge(std::vector<int> const &in1, std::vector<int> const &in2, std::vector<int> &outvars, int k);
 
 protected:
+  int nVars;
   bool fDirect;
 
   Solver(): nVars(0), fDirect(true), zero(0x7fffffff), one(-0x7fffffff) {}
@@ -49,6 +48,8 @@ public:
 
   virtual int Solve() = 0;
   virtual int Solve(std::vector<int> const &assumption, std::set<int> &core) = 0;
+
+  virtual void PrintStat() = 0;
 
   inline int NewVar();
 
