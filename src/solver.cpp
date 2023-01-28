@@ -5,6 +5,14 @@
 
 using namespace std;
 
+void Solver::Pairwise(vector<int> const &vLits) {
+  for(int i = 1; i < (int)vLits.size(); i++) {
+    for(int j = 0; j < i; j++) {
+      AddClause_(vector<int>{-vLits[i], -vLits[j]});
+    }
+  }
+}
+
 void Solver::Bimander(vector<int> const &vLits, int nbim) {
   vector<int> vLits2;
   int m = vLits.size() / nbim + vLits.size() % nbim;
@@ -21,7 +29,7 @@ void Solver::Bimander(vector<int> const &vLits, int nbim) {
     if(vLits2.size() > 1) {
       for(int p = 0; p < (int)vLits2.size(); p++) {
         for(int q = p+1; q < (int)vLits2.size(); q++) {
-          AddClause(-vLits2[p], -vLits2[q]);
+          AddClause_(vector<int>{-vLits2[p], -vLits2[q]});
         }
       }
     }
@@ -29,11 +37,11 @@ void Solver::Bimander(vector<int> const &vLits, int nbim) {
       int b = 1 << k;
       if(i & b) {
         for(int j = 0; j < (int)vLits2.size(); j++) {
-          AddClause(-vLits2[j], cv[k]);
+          AddClause_(vector<int>{-vLits2[j], cv[k]});
         }
       } else {
         for(int j = 0; j < (int)vLits2.size(); j++) {
-          AddClause(-vLits2[j], -cv[k]);
+          AddClause_(vector<int>{-vLits2[j], -cv[k]});
         }
       }
     }

@@ -24,7 +24,8 @@ private:
   }
 
   void AMO_(std::vector<int> const &vLits) {
-    Bimander(vLits, 2);
+    Pairwise(vLits);
+    //Bimander(vLits, 2);
   }
 
   void AMK_(std::vector<int> const &vLits, int k) {

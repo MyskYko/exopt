@@ -12,6 +12,7 @@ private:
   void PwMerge(std::vector<int> const &a, std::vector<int> const &b, std::vector<int> &c);
   void PwSort(std::vector<int> const &a, std::vector<int> &d);
 
+  // TODO: Use AddClause_
   static bool PreferDirectMerge(unsigned n, unsigned k);
   void DirectMerge(std::vector<int> const &in1, std::vector<int> const &in2, std::vector<int> &outvars, int k);
   void DirectCardClauses(std::vector<int> const &invars, int start, int pos, int j, std::vector<int> &args);
@@ -20,7 +21,6 @@ private:
   void Comparator2(int x1, int x2, int y1, int y2);
   void OddEvenCombine(std::vector<int> const &in1, std::vector<int> const &in2, std::vector<int> &outvars, int k);
   void OddEvenMerge4(std::vector<int> const in[], std::vector<int> &outvars, int k);
-
   void PairwiseMerge(std::vector<int> const &x, std::vector<int> const &y, std::vector<int> &outvars, int k);
   void DirectPairwiseMerge(std::vector<int> const &in1, std::vector<int> const &in2, std::vector<int> &outvars, int k);
 
@@ -29,6 +29,7 @@ protected:
 
   Solver(): nVars(0), fDirect(true), zero(0x7fffffff), one(-0x7fffffff) {}
 
+  void Pairwise(std::vector<int> const &vLits);
   void Bimander(std::vector<int> const &vLits, int nbim);
 
   void PwNet(std::vector<int> vLits, std::vector<int> & res);
@@ -51,6 +52,7 @@ public:
 
   inline int NewVar();
 
+  // TODO: Always use vector
   inline void AddClause(std::vector<int> const &vLits);
   inline void AddClause(int a);
   inline void AddClause(int a, int b);
