@@ -3,6 +3,7 @@
 #include <cassert>
 
 #include "ioutil.hpp"
+#include "util.hpp"
 #include "rel.hpp"
 
 using namespace std;
@@ -63,5 +64,47 @@ void ReadBooleanRelation(string fname, vector<vector<bool> > &br, vector<vector<
   if(fVerbose) {
     cout << "Boolean relation :" << endl;
     PrintVecWithIndex(br);
+  }
+}
+
+void WriteBooleanRelation(string fname, vector<vector<bool> > const &br, vector<vector<bool> > const *sim) {
+  ofstream f(fname);
+  int nInPats = br.size();
+  int nOutPats = br[0].size();
+  int nInputs = clog2(nInPats);
+  int nOutputs = clog2(nOutPats);
+  int nDivisors = 0;
+  if(sim) {
+    nDivisors = (*sim)[0].size();
+  }
+  f << nInputs << " " << nDivisors << " " << nOutputs << " " << nInPats << endl << endl;
+  // inputs
+  for(int i = 0; i < nInputs; i++) {
+    int dx = 1 << i;
+    int nx = nInPats / dx;
+    for(int j = 0; j < nx; j++) {
+      for(int k = 0; k < dx; k++) {
+        f << (j & 1);
+      }
+    }
+    f << endl;
+  }
+  f << endl;
+  // divisors
+  if(nDivisors) {
+    for(int i = 0; i < nDivisors; i++) {
+      for(int j = 0; j < nInPats; j++) {
+        f << (*sim)[j][i];
+      }
+      f << endl;
+    }
+    f << endl;
+  }
+  // outputs
+  for(int j = 0; j < nOutPats; j++) {
+    for(int i = 0; i < nInPats; i++) {
+      f << br[i][j];
+    }
+    f << endl;
   }
 }
