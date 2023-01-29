@@ -15,6 +15,7 @@ int main(int argc, char **argv) {
   ap.add_argument("-r", "--numrounds").default_value(10).scan<'i', int>();
   ap.add_argument("-v", "--verbose").default_value(false).implicit_value(true);
   ap.add_argument("-g", "--numgates").scan<'i', int>();
+  ap.add_argument("-d", "--dump").default_value(false).implicit_value(true);
   try {
     ap.parse_args(argc, argv);
   }
@@ -29,6 +30,7 @@ int main(int argc, char **argv) {
   int windowsize = ap.get<int>("--windowsize");
   bool fAllDivisors = ap.get<bool>("--alldivisors");
   int numrounds = ap.get<int>("--numrounds");
+  bool fDump = ap.get<bool>("--dump");
   bool fVerbose = ap.get<bool>("--verbose");
   mt19937 rg;
   if(inname.substr(inname.find_last_of(".") + 1) == "rel") {
@@ -51,6 +53,11 @@ int main(int argc, char **argv) {
   aigman aig_orig(inname);
   aig_orig.supportfanouts();
   aigman aigout = aig_orig;
+  int *nProblems = NULL;
+  if(fDump) {
+    nProblems = new int;
+    *nProblems = 0;
+  }
   for(int round = 0; round < numrounds; round++) {
     aigman aig = aig_orig;
     while(true) {
@@ -62,7 +69,7 @@ int main(int argc, char **argv) {
       } else {
         fFirst = rg() % 2;
       }
-      OptMan opt(aig, cutsize, windowsize, fAllDivisors, round, fVerbose);
+      OptMan opt(aig, cutsize, windowsize, fAllDivisors, round, fVerbose, nProblems);
       if(round > 1) {
         opt.Randomize();
       }
@@ -83,6 +90,9 @@ int main(int argc, char **argv) {
     if(aig.nGates < aigout.nGates) {
       aigout = aig;
     }
+  }
+  if(fDump) {
+    delete nProblems;
   }
   cout << aigout.nGates << endl;
   aigout.write(outname);
