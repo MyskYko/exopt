@@ -21,11 +21,19 @@ SynthMan<T>::SynthMan(vector<vector<bool> > const &br, vector<vector<bool> > con
 template <class T>
 void SynthMan<T>::GenSels() {
   negs.clear();
-  negs.resize(nGates * 2);
+  negs.resize(nGates * 3);
+  for(int i = 0; i < nGates; i++) {
+    negs[i*3] = S->NewVar();
+    negs[i*3+1] = S->NewVar();
+    negs[i*3+2] = S->NewVar();
+    S->AddClause(negs[i*3], negs[i*3+1], negs[i*3+2]);
+    S->AddClause(-negs[i*3], negs[i*3+1], -negs[i*3+2]);
+    S->AddClause(negs[i*3], -negs[i*3+1], -negs[i*3+2]);
+    S->AddClause(-negs[i*3], -negs[i*3+1], negs[i*3+2]);
+  }
   sels.clear();
   sels.resize(nGates * 2);
   for(int i = 0; i < nGates * 2; i++) {
-    negs[i] = S->NewVar();
     sels[i].resize(nInputs + nExtraInputs + i/2 - 1);
     for(int j = 0; j < nInputs + nExtraInputs + i/2 - 1; j++) {
       sels[i][j] = S->NewVar();
@@ -126,13 +134,15 @@ void SynthMan<T>::GenOne(vector<int> cands, vector<int> const &pos) {
     }
     cands[nInputs + nExtraInputs + i] = S->NewVar();
     for(int k = 0; k < 4; k++) {
-      for(int neg = 0; neg < 4; neg++) {
-        vector<int> vLits(5);
-        vLits[0] = (k & 1)? -fis[0]: fis[0];
-        vLits[1] = (neg & 1)? -negs[i + i]: negs[i + i];
-        vLits[2] = (k >> 1)? -fis[1]: fis[1];
-        vLits[3] = (neg >> 1)? -negs[i + i + 1]: negs[i + i + 1];
-        vLits[4] = ((k ^ neg) == 3)? cands[nInputs + nExtraInputs + i]: -cands[nInputs + nExtraInputs + i];
+      vector<int> vLits(4);
+      vLits[0] = (k & 1)? -fis[0]: fis[0];
+      vLits[1] = (k >> 1)? -fis[1]: fis[1];
+      vLits[2] = k? negs[i*3 + k-1]: S->zero;
+      vLits[3] = -cands[nInputs + nExtraInputs + i];
+      S->AddClause(vLits);
+      if(k) {
+        vLits[2] = -vLits[2];
+        vLits[3] = -vLits[3];
         S->AddClause(vLits);
       }
     }
@@ -167,7 +177,7 @@ aigman *SynthMan<T>::GetAig() {
   aigman *aig = new aigman(nInputs + nExtraInputs, 0);
   vector<int> cands(nInputs + nExtraInputs + nGates);
   for(int i = 0; i < nInputs + nExtraInputs; i++) {
-    cands[i] = i + 1;
+    cands[i] = (i + 1) << 1;
   }
   for(int i = 0; i < nGates; i++) {
     vector<int> fis(2);
@@ -179,9 +189,15 @@ aigman *SynthMan<T>::GetAig() {
         }
       }
       assert(j < nInputs + nExtraInputs + i - 1);
-      fis[k] = S->Value(negs[i + i + k])? (cands[j + 1 - k] << 1) ^ 1: cands[j + 1 - k] << 1;
+      fis[k] = cands[j + 1 - k];
     }
-    cands[nInputs + nExtraInputs + i] = aig->newgate(fis[0], fis[1]);
+    if(S->Value(negs[i*3]) && S->Value(negs[i*3 + 1]) && S->Value(negs[i*3 + 2])) {
+      cands[nInputs + nExtraInputs + i] = (aig->newgate(fis[0] ^ 1, fis[1] ^ 1) << 1) ^ 1;
+    } else {
+      fis[0] ^= S->Value(negs[i*3 + 1]);
+      fis[1] ^= S->Value(negs[i*3]);
+      cands[nInputs + nExtraInputs + i] = aig->newgate(fis[0], fis[1]) << 1;
+    }
   }
   aig->nPos = nOutputs;
   aig->vPos.resize(nOutputs);
@@ -193,7 +209,7 @@ aigman *SynthMan<T>::GetAig() {
       }
     }
     assert(j <= nInputs + nExtraInputs + nGates);
-    int val = (j == nInputs + nExtraInputs + nGates)? 0: cands[j] << 1;
+    int val = (j == nInputs + nExtraInputs + nGates)? 0: cands[j];
     aig->vPos[i] = val ^ (int)S->Value(ponegs[i]);
   }
   return aig;
