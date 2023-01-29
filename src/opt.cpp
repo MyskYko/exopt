@@ -1,5 +1,6 @@
 #include <map>
 #include <algorithm>
+#include <fstream>
 
 #include <cassert>
 
@@ -8,10 +9,11 @@
 #include "sim.hpp"
 #include "synth.hpp"
 #include "ioutil.hpp"
+#include "rel.hpp"
 
 using namespace std;
 
-OptMan::OptMan(aigman &aig, int cutsize, int windowsize, bool fAllDiv, int seed, bool fVerbose): aig(aig), cutsize(cutsize), windowsize(windowsize), fAllDiv(fAllDiv), fVerbose(fVerbose) {
+OptMan::OptMan(aigman &aig, int cutsize, int windowsize, bool fAllDiv, int seed, bool fVerbose, int *nProblems): aig(aig), cutsize(cutsize), windowsize(windowsize), fAllDiv(fAllDiv), fVerbose(fVerbose), nProblems(nProblems) {
   // cut enumeration
   vector<vector<Cut> > cuts;
   CutEnumeration(aig, cuts, cutsize);
@@ -192,6 +194,12 @@ bool OptMan::OptWindows() {
     vector<vector<bool> > br;
     GetBooleanRelation(aig, inputs, outputs, br);
     //PrintVecWithIndex(br);
+    if(nProblems) {
+      string fname = "case" + to_string((*nProblems)++) + ".rel";
+      WriteBooleanRelation(fname, br, NULL);
+      ofstream f("list.txt", ios_base::app);
+      f << fname << " " << nGates - 1 << endl;
+    }
     // synthesis
     SynthMan<KissatSolver> synthman(br);
     if(Synthesize(synthman, nGates, inputs, outputs)) {
@@ -249,6 +257,13 @@ bool OptMan::OptLarge() {
       vector<vector<bool> > sim;
       GetSim(aig, inputs, extra, sim);
       //PrintVecWithIndex(sim, "\t\t");
+      if(nProblems) {
+        string fname = "case" + to_string((*nProblems)++) + ".rel";
+        WriteBooleanRelation(fname, br, &sim);
+        ofstream f("list.txt", ios_base::app);
+        f << fname << " " << nGates2 - 1 << endl;
+      }
+      // synthesis
       SynthMan<KissatSolver> synthman(br, &sim);
       extra.insert(extra.begin(), inputs.begin(), inputs.end());
       if(Synthesize(synthman, nGates2, extra, outputs2, "\t\t")) {
