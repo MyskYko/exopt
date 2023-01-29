@@ -115,19 +115,27 @@ void SynthMan<T>::GenOne(vector<int> cands, vector<int> const &pos) {
     for(int k = 0; k <= 1; k++) {
       fis[k] = S->NewVar();
       for(int j = 0; j < nInputs + nExtraInputs + i - 1; j++) {
-        vector<int> vLits(4);
+        vector<int> vLits(3);
         vLits[0] = -sels[i + i + k][j];
-        for(int neg = 0; neg < 2; neg++) {
-          for(int cand = 0; cand < 2; cand++) {
-            vLits[1] = neg? -negs[i + i + k]: negs[i + i + k];
-            vLits[2] = cand? -cands[j + 1 - k]: cands[j + 1 - k];
-            vLits[3] = (neg ^ cand)? fis[k]: -fis[k];
-            S->AddClause(vLits);
-          }
+        for(int cand = 0; cand < 2; cand++) {
+          vLits[1] = cand? -cands[j + 1 - k]: cands[j + 1 - k];
+          vLits[2] = cand? fis[k]: -fis[k];
+          S->AddClause(vLits);
         }
       }
     }
-    cands[nInputs + nExtraInputs + i] = S->And2(fis[0], fis[1]);
+    cands[nInputs + nExtraInputs + i] = S->NewVar();
+    for(int k = 0; k < 4; k++) {
+      for(int neg = 0; neg < 4; neg++) {
+        vector<int> vLits(5);
+        vLits[0] = (k & 1)? -fis[0]: fis[0];
+        vLits[1] = (neg & 1)? -negs[i + i]: negs[i + i];
+        vLits[2] = (k >> 1)? -fis[1]: fis[1];
+        vLits[3] = (neg >> 1)? -negs[i + i + 1]: negs[i + i + 1];
+        vLits[4] = ((k ^ neg) == 3)? cands[nInputs + nExtraInputs + i]: -cands[nInputs + nExtraInputs + i];
+        S->AddClause(vLits);
+      }
+    }
   }
   for(int i = 0; i < nOutputs; i++) {
     for(int j = 0; j < nInputs + nExtraInputs + nGates; j++) {
