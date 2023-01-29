@@ -48,40 +48,45 @@ void SynthMan<T>::GenSels() {
 
 template <class T>
 void SynthMan<T>::SortSels() {
+  // fanin constraints for each gate
   for(int i = 0; i < nGates; i++) {
     for(int j = 0; j < nInputs + nExtraInputs + i - 2; j++) {
-      vector<int> vLits(j + 2);
-      for(int k = 0; k <= j; k++) {
-        vLits[k] = sels[i + i + 1][k];
+      vector<int> vLits(2);
+      vLits[0] = -sels[i + i][j];
+      for(int k = j + 1; k < nInputs + nExtraInputs + i - 1; k++) {
+        vLits[1] = -sels[i + i + 1][k];
+        S->AddClause(vLits);
       }
-      vLits[j + 1] = -sels[i + i][j];
-      S->AddClause(vLits);
     }
   }
+  // fanin constraints for consecutive gates
+  /*
   for(int i = 0; i < nGates - 1; i++) {
     for(int j = 0; j < nInputs + nExtraInputs + i - 2; j++) {
-      vector<int> vLits(j + 2);
-      for(int k = 0; k <= j; k++) {
-        vLits[k] = sels[i + i][k];
+      vector<int> vLits(2);
+      vLits[0] = -sels[i + i + 2][j];
+      for(int k = j + 1; k < nInputs + nExtraInputs + i - 1; k++) {
+        vLits[1] = -sels[i + i][k];
+        S->AddClause(vLits);
       }
-      vLits[j + 1] = -sels[i + i + 2][j];
-      S->AddClause(vLits);
     }
   }
   for(int i = 0; i < nGates - 1; i++) {
     for(int j = 1; j < nInputs + nExtraInputs + i - 1; j++) {
       for(int k = 0; k < j; k++) {
-        vector<int> vLits(k + 4);
-        for(int l = 0; l <= k; l++) {
-          vLits[l] = sels[i + i + 1][l];
+        vector<int> vLits(4);
+        vLits[0] = -sels[i + i + 3][k];
+        vLits[1] = -sels[i + i][j];
+        vLits[2] = -sels[i + i + 2][j];
+        for(int l = k + 1; l <= j; l++) {
+          vLits[3] = -sels[i + i + 1][l];
+          S->AddClause(vLits);
         }
-        vLits[k + 1] = -sels[i + i + 3][k];
-        vLits[k + 2] = -sels[i + i][j];
-        vLits[k + 3] = -sels[i + i + 2][j];
-        S->AddClause(vLits);
       }
     }
   }
+  */
+  // gate irredundance constraints
   for(int i = 1; i < nGates; i++) {
     for(int j = i - 1; j >= 0; j--) {
       for(int k = 0; k < nInputs + nExtraInputs + j - 1; k++) {
