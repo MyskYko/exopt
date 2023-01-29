@@ -113,22 +113,44 @@ void SynthMan<T>::GenOne(vector<int> cands, vector<int> const &pos) {
   for(int i = 0; i < nGates; i++) {
     vector<int> fis(2);
     for(int k = 0; k <= 1; k++) {
-      vector<int> tmps(nInputs + nExtraInputs + i - 1);
+      fis[k] = S->NewVar();
       for(int j = 0; j < nInputs + nExtraInputs + i - 1; j++) {
-        tmps[j] = S->And2(cands[j + 1 - k], sels[i + i + k][j]);
+        vector<int> vLits(4);
+        vLits[0] = -sels[i + i + k][j];
+        for(int neg = 0; neg < 2; neg++) {
+          for(int cand = 0; cand < 2; cand++) {
+            vLits[1] = neg? -negs[i + i + k]: negs[i + i + k];
+            vLits[2] = cand? -cands[j + 1 - k]: cands[j + 1 - k];
+            vLits[3] = (neg ^ cand)? fis[k]: -fis[k];
+            S->AddClause(vLits);
+          }
+        }
       }
-      int r = S->OrN(tmps);
-      fis[k] = S->Xor2(r, negs[i + i + k]);
     }
     cands[nInputs + nExtraInputs + i] = S->And2(fis[0], fis[1]);
   }
   for(int i = 0; i < nOutputs; i++) {
-    vector<int> tmps(nInputs + nExtraInputs + nGates);
     for(int j = 0; j < nInputs + nExtraInputs + nGates; j++) {
-      tmps[j] = S->And2(cands[j], posels[i][j]);
+      vector<int> vLits(4);
+      vLits[0] = -posels[i][j];
+      for(int neg = 0; neg < 2; neg++) {
+        for(int cand = 0; cand < 2; cand++) {
+          vLits[1] = neg? -ponegs[i]: ponegs[i];
+          vLits[2] = cand? -cands[j]: cands[j];
+          vLits[3] = (neg ^ cand)? pos[i]: -pos[i];
+          S->AddClause(vLits);
+        }
+      }
     }
-    int r = S->OrN(tmps);
-    S->Xor2(r, ponegs[i], pos[i]);
+    vector<int> vLits(nInputs + nExtraInputs + nGates + 2);
+    for(int j = 0; j < nInputs + nExtraInputs + nGates; j++) {
+      vLits[2 + j] = posels[i][j];
+    }
+    for(int neg = 0; neg < 2; neg++) {
+      vLits[0] = neg? -ponegs[i]: ponegs[i];
+      vLits[1] = neg? pos[i]: -pos[i];
+      S->AddClause(vLits);
+    }
   }
 }
 
@@ -176,14 +198,8 @@ aigman *SynthMan<T>::Synth(int nGates_) {
   GenSels();
   SortSels();
   for(int i = 0; i < (int)br.size(); i++) {
-    bool fDc = true;
-    for(int j = 0; j < (int)br[i].size(); j++) {
-      if(!br[i][j]) {
-        fDc = false;
-        break;
-      }
-    }
-    if(fDc) {
+    int nOnes = count(br[i].begin(), br[i].end(), true);
+    if(nOnes == (int)br[i].size()) {
       continue;
     }
     vector<int> pis(nInputs);
@@ -195,20 +211,31 @@ aigman *SynthMan<T>::Synth(int nGates_) {
       exins[k] = (*sim)[i][k]? S->one: S->zero;
     }
     vector<int> pos(nOutputs);
-    for(int k = 0; k < nOutputs; k++) {
-      pos[k] = S->NewVar();
-    }
-    vector<int> tmps;
-    for(int j = 0; j < (int)br[i].size(); j++) {
-      if(br[i][j]) {
-        vector<int> vLits(nOutputs);
-        for(int k = 0; k < nOutputs; k++) {
-          vLits[k] = (j >> k) & 1? pos[k]: -pos[k];
+    if(nOnes == 1) {
+      for(int j = 0; j < (int)br[i].size(); j++) {
+        if(br[i][j]) {
+          for(int k = 0; k < nOutputs; k++) {
+            pos[k] = (j >> k) & 1? S->one: S->zero;
+          }
+          break;
         }
-        tmps.push_back(S->AndN(vLits));
       }
+    } else {
+      for(int k = 0; k < nOutputs; k++) {
+        pos[k] = S->NewVar();
+      }
+      vector<int> tmps;
+      for(int j = 0; j < (int)br[i].size(); j++) {
+        if(br[i][j]) {
+          vector<int> vLits(nOutputs);
+          for(int k = 0; k < nOutputs; k++) {
+            vLits[k] = (j >> k) & 1? pos[k]: -pos[k];
+          }
+          tmps.push_back(S->AndN(vLits));
+        }
+      }
+      S->AddClause(tmps);
     }
-    S->AddClause(tmps);
     pis.insert(pis.end(), exins.begin(), exins.end());
     GenOne(pis, pos);
   }
