@@ -68,7 +68,6 @@ void SynthMan<T>::SortSels() {
     }
   }
   // fanin constraints for consecutive gates
-  /*
   for(int i = 0; i < nGates - 1; i++) {
     for(int j = 0; j < nInputs + nExtraInputs + i - 2; j++) {
       vector<int> vLits(2);
@@ -93,7 +92,6 @@ void SynthMan<T>::SortSels() {
       }
     }
   }
-  */
   // gate irredundance constraints
   for(int i = 1; i < nGates; i++) {
     for(int j = i - 1; j >= 0; j--) {

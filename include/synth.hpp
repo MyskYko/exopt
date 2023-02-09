@@ -26,6 +26,11 @@ private:
   void GenOne(std::vector<int> cands, std::vector<int> const &pos);
   aigman *GetAig();
 
+  void GenSelsOld();
+  void SortSelsOld();
+  void GenOneOld(std::vector<int> cands, std::vector<int> const &pos);
+  aigman *GetAigOld();
+
   void GenSels(std::vector<int> const &assignment);
   void SortSels(std::vector<int> const &assignment);
   void GenOne(std::vector<int> cands, std::vector<int> const &pos, std::vector<int> const &assignment);
